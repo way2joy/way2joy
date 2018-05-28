@@ -1,0 +1,381 @@
+데이터가 보인다에서 지수평활법의 아주 간단 버전만 보았었는데,
+실제 사용되는 지수평활법은 데이터의 종류나 특성에 따라 30가지가 되네요.
+
+그래도 이름을 들어보았던 거라 친근했습니다.
+
+연습문제를 푸는 게, 무슨 각본에 따라 연습하는 기분이 드는 것은
+MOOC introduction to probability이후 오랜만인데,
+공부를 하기위한 목적이라 뭐 괜찮네요.
+
+FPP : Exercise 7.8
+========================================================
+
+1. Data set books contains the daily sales of paperback and hardcover books at the same store. The task is to forecast the next four days’ sales for paperback and hardcover books (data set books).
+```{r 1_data}
+unclass(books) #paperback and hardcover, 일별 30일 데이터
+```
+
+- Plot the series and discuss the main features of the data.
+```{r1_1}
+plot(books) #Matrix형태의 시계열 그래프는 분할된 화면으로 보여진다.
+#paperback은 시즈널리티(요일별?)가 보이나 계속 상승추세.
+#hardcover는 페이퍼백이 팔리면서 알려지고난후 중순이후 부터 따라서 판매가 증가하는 추세를 보이는 것으로 판단됨.
+```
+
+- Use simple exponential smoothing with the ses function (setting initial="simple") and explore different values of α for the paperback series. Record the within-sample SSE for the one-step forecasts. Plot SSE against α and find which value of α works best. What is the effect of α on the forecasts?
+```{r}
+sseAlphaPaper <- rep(0,9)
+alphaVec <- seq(0.1,0.9,0.1)
+alphaVec
+
+paperData <- ts(books[,1], class="ts", names="paperback")
+unclass(paperData)
+for (i in 1:9) {
+  paperSes <- ses(paperData, alpha=alphaVec[i], initial="simple")
+  sseAlphaPaper[i] <- sum(paperSes$residuals^2)  #SSE :잔차의 제곱의 합
+}
+plot(sseAlphaPaper, type="b") # alpha가 0.2정도가 가장 SSE가 적음.
+
+
+```
+
+@Time-series.데이터 핸들링 방법
+```{r ts_window_practice}
+presidents
+unclass(presidents)
+matrix(presidents)
+
+window(presidents, 1960, c(1969,4)) # values in the 1960's
+window(presidents, deltat = 1)  # All Qtr1s
+window(presidents, start = c(1945,3), deltat = 1)  # All Qtr3s
+window(presidents, 1944, c(1979,2), extend = TRUE)
+```
+
+- Now let ses select the optimal value of α. Use this value to generate forecasts for the next four days. 
+Compare your results with this.
+```{r 1_2}
+fit1 <- ses(paperData, alpha=0.2, h=4)
+plot(fit1)
+fit2 <- ses(paperData, initial="simple", h=4)
+fit2$model # 모델에서는 알파를 0.2125로 보았음. 0.2와 큰 차이는 없음. ses모델에서는 initial과 alpha를 어떻게 주는 가가 매우 중요함을 알 수 있음. initial states는 190임.
+
+lines(fitted(fit2), col="red")
+lines(fit2$mean, col="green", lwd=2)
+plot(fit2)
+```
+
+- Repeat but with initial="optimal". How much difference does an optimal initial level make?
+```{r 1_3}
+sseAlphaPaper <- rep(0,9)
+for (i in 1:9) {
+  paperSes <- ses(paperData, alpha=alphaVec[i], initial="optimal")
+  sseAlphaPaper[i] <- sum(paperSes$residuals^2)  #SSE :잔차의 제곱의 합
+}
+plot(sseAlphaPaper, type="b") 
+
+fit3 <- ses(paperData, initial="optimal", h=4)
+fit3$model # alpha가 0.1685, initial states는 170.83임.
+```
+
+
+- Repeat steps (b)–(d) with the hardcover series.
+
+```{r 1_4_1}
+hcoverData <- ts(books[,2], class="ts", names="paperback")
+unclass(hcoverData)
+sseAlphaHcover <- rep(0,9)
+for (i in 1:9) {
+  hcoverSes <- ses(hcoverData, alpha=alphaVec[i], initial="simple")
+  sseAlphaHcover[i] <- sum(hcoverSes$residuals^2)  #SSE :잔차의 제곱의 합
+}
+plot(sseAlphaHcover, type="b") # 3이 가장 낮은 SSE를 보이는 것으로 보임.
+```
+
+```{r 1_4_2}
+fit5 <- ses(hcoverData, alpha=0.3, h=4)
+fit5$model # 0.3 / 150 / 311(AIC)
+fit6 <- ses(hcoverData, initial="simple", h=4)
+fit6$model # 0.347 / 139 / AIC가 없다.
+fit7 <- ses(hcoverData, initial="optimal", h=4)
+fit7$model # 0.347 / 139 / 313(AIC)
+plot(hcoverData)
+plot(fit7)
+```
+
+
+2. Apply Holt’s linear method to the paperback and hardback series and compute four-day forecasts in each case.
+```{r 2_1_data_modeling}
+paperHolt <- holt(paperData, initial="simple", h=4)
+paperHolt$model
+plot(paperHolt)
+
+
+paperHolt1 <- holt(paperData, initial="simple", h=4, exponential=TRUE)
+paperHolt1$model
+plot(paperHolt)
+
+paperHolt2 <- holt(paperData, initial="optimal", h=4)
+paperHolt2$model
+plot(paperHolt2)
+sum(residuals(paperHolt2)^2) # optimal을 사용하니, SSE가 급격히 좋아진다.
+
+hcoverHolt <- holt(hcoverData, initial="simple", h=4)
+hcoverHolt$model
+
+hcoverHolt2 <- holt(hcoverData, initial="simple", h=4, exponential=TRUE)
+hcoverHolt2$model
+
+hcoverHolt3 <- holt(hcoverData, initial="optimal", h=4)
+hcoverHolt3$model
+sum(residuals(hcoverHolt3)^2) # 급격히 좋아진다. SSE가...
+```
+
+- Compare the SSE measures of Holt’s method for the two series to those of simple exponential smoothing in the previous question. Discuss the merits of the two forecasting methods for these data sets.
+```{r 2_2}
+# Paperback데이터의 경우
+sum(residuals(paperHolt2)^2)
+sseAlphaPaper[2] # 심플 지수평활법 최적치 보다 SSE가 높게 나타남.
+sseAlphaPaper # 전체적으로 보면 6~7번째 순위가 됨.
+
+# Hcover 데이터의 경우
+sum(residuals(hcoverHolt2)^2)
+sseAlphaHcover[4]
+sseAlphaHcover # Hcover의 경우에는 크게 차이가 남.
+
+# holt 리니어 방법은 트렌드를 예측에 반영하는 방법으로 
+plot(paperData) # 어느정도 일과된 트렌드가 보이는 데이터는 트렌드 요인을 반영하니, 정확도가 높아졌지만,
+
+plot(hcoverData) # 일관 트렌드를 찾아보기 힘든 이 데이터의 경우는 거의 단순지수평활법보다 성능이 좋지 않게 나온다.
+
+#결론은 데이터의 형태에 맞게 방법을 사용해야 한다는 것이다.
+# 30개의 지수평활법 방식중에 어떤 방식을 쓸지 데이터에 맞게 정하는 것이 중요하다는 의미임.
+```
+
+- Compare the forecasts for the two series using both methods. Which do you think is best?
+```{r 2_3}
+plot(fit2)
+plot(paperHolt2) # 예측치가 트렌드를 반영해 flat이 아니라 약간 우상향하는 방향으로 조정되었다. 신뢰구간은 큰 차이가 없다.
+
+plot(fit7)
+plot(hcoverHolt2) # 우상향하는 트렌드가 보이기는 하는데, 신뢰구간이 굉장히 커져버렸다. 실무적으로는 신뢰구간이 작은것을 선택할 수도 있을 것 같다. 이 경우는 일장 일단이 있는 것이 보인다.
+```
+
+- Calculate a 95% prediction interval for the first forecast for each series using both methods, assuming normal errors. Compare your forecasts with those produced by R.
+```{r 2_4_SES_prediction interval}
+# 구간 예측을 위해서는 오차한계(ME:margin of error)를 구해야 한다.
+# NID에서 95% critical value는 1.96이다.
+qnorm(0.975)
+# Paper SES
+(paperSesMe <- 1.96*sqrt(sum(residuals(fit2)^2)/(30-1))/sqrt(30))
+fit2
+210-141 # 컴퓨터로 계산된 예측 구간은 약 68~69이다.
+278-210
+
+#이게 숫자가 비슷하게 나온다. confidence interval공식에 의하면 standard error구할때보 n-1로 나누어 주어야 하고, 오차한계를 구할때도 sqrt(n)으로 나누어 주게 되어 있는데,,,,, 예측의 경우에는 다르게 하는가?
+(paperSesMe2 <- 1.96*sqrt(sum(residuals(fit2)^2)/(30-1)))
+
+unclass(fit2)
+```
+
+```{r 2_4_holt_prediction interval}
+paperHolt2
+209-144 # 약 65
+
+(paperHoltMe <- 1.96*sqrt(sum(residuals(paperHolt2)^2)/(30-1))/sqrt(30))
+
+(paperHoltMe2 <- 1.96*sqrt(sum(residuals(paperHolt2)^2)/(30)))
+
+paperHolt2$mean[1]-paperHoltMe2 #144.6095와 약간 다른다.
+# (n-1)이 아니라 n으로 나누니까 거의 맞는 답이 나온다.
+
+# 신뢰구간입장에서는 holt방법이 이경우에는 거의 맞는다.
+```
+
+3.For this exercise, use the quarterly UK passenger vehicle production data from 1997:1--2005:1 (data set ukcars).
+```{r 3_1_data}
+unclass(ukcars) 분기별 데이터 이다.
+ukcars
+```
+
+Plot the data and describe the main features of the series.
+```{r 3_2}
+plot(ukcars)
+# seasonality가 있고, 트렌드도 있는데다가 cycle까지 보인다.
+# 진정한 시계열 데이터라고 할 수 있을 듯하다.
+# 2000년대초에 뭔가 큰 변동이 있었던 것으로 보인다. 어떤 intervention이 있었을까?
+```
+
+Decompose the series using STL and obtain the seasonally adjusted data.
+```{r 3_3}
+# “Seasonal and Trend decomposition using Loess”이 STL이었지...
+# 그새 잊어먹었다.
+
+ukfit <- stl(ukcars, s.window=4)
+unclass(ukfit) # decomplose된 정보가 time.series에 들어가 있다.
+lines(ukfit$time.series[,2], col="red") #이름그대로 1이 시즌, 2가 트렌드이다.
+lines(ukfit$time.series[,1]+ukfit$time.series[,2], col="blue")
+# 한번에 표시하는 것은 plot으로..
+plot(ukfit)
+
+ukSeaAdj <- seasadj(ukfit) # seasonally adjusted data는 seasadj함수를 통해서 추출가능하다. 각기간의 평균을 구한다고 했던 기억이 난다.
+plot(ukSeaAdj)
+plot(ukcars)
+lines(ukSeaAdj, col="red")
+```
+
+Forecast the next two years of the series using an additive damped trend method applied to the seasonally adjusted data. Then reseasonalize the forecasts. Record the parameters of the method and report the RMSE of the one-step forecasts from your method.
+```{r 3_4}
+# seasonality가 들어가면 holt-winter모델을 써야하니까 STL을 써서 seasonality를 제거하고, 모델을 적용하게 만드시는 구나.
+#분기별 데이터니까 2년은 8로 표현을 한다.
+ukHoltDamp <- holt(ukSeaAdj, damped=TRUE, initial="optimal", h=8)
+ukHoltDamp
+plot(ukHoltDamp)
+unclass(ukHoltDamp)
+ukHoltDamp$model # 알파, 베타, 파이 등과 initial state값의 확인이 가능하다.
+rmse = mean(residuals(ukHoltDamp)^2)
+rmse #384
+```
+
+Forecast the next two years of the series using Holt's linear method applied to the seasonally adjusted data. Then reseasonalize the forecasts. Record the parameters of the method and report the RMSE of of the one-step forecasts from your method.
+```{r 3_5}
+ukHolt <- holt(ukSeaAdj, initial="optimal", h=8)
+ukHolt
+plot(ukHolt)
+unclass(ukHolt)
+ukHolt$model # 알파, 베타, 파이 등과 initial state값의 확인이 가능하다.
+rmse = mean(residuals(ukHolt)^2)
+rmse #373
+
+# damped된 데이터는 장기적인 트렌드가 제어되어서 플랫한데, 그냥 additive 모델을 트렌드가 살아있어 우상향하는 직선이 된다.
+```
+
+Now use ets() to choose a seasonal model for the data.
+```{r 3_6}
+# ets함수는 인자가 많은데, 일단 모델을 만든 다음 forecast함수를 써서 예측치를 만든다.
+ukEts <- ets(ukcars)
+unclass(ukEts)
+```
+
+Compare the RMSE of the fitted model with the RMSE of the model you obtained using an STL decomposition with Holt's method. Which gives the better in-sample fits?
+```{r 3_7}
+mean(residuals(ukEts)^2)# in-sample fit은 holt가 더 좋다.
+```
+
+Compare the forecasts from the two approaches? Which seems most reasonable?
+```{r 3_8}
+ukEtsFcast <- forecast(ukEts, h=8)
+plot(ukEtsFcast)
+# seasonality가 반영되어 더욱 현실감이 있는 예측치가 나온다.
+# 연습문제가 꼭 잘 짜여진 각본과 같은 느낌이 온다.
+```
+
+4.For this exercise, use the monthly Australian short-term overseas visitors data, May 1985--April 2005. (Data set: visitors.)
+```{r 4_1_data}
+visitors # monthly data, 1985.5~2005.4월
+unclass(visitors)
+```
+
+Make a time plot of your data and describe the main features of the series.
+```{r 4_2_plot}
+plot(visitors)
+# 지속적으로 상승하고 있는 트렌드, seasonality가 불규칙해보이고, 2003~4년에는 큰 감소를 나타낸 시기도 존재함.
+```
+
+Forecast the next two years using Holt-Winters' multiplicative method.
+```{r 4_3_forecast}
+# hw의 경우에는 forecast를 $mean으로 하는 것 같은데,,,
+# 예측은 무조건 h=로 하면 된다. ets빼고는...
+visitF1 <- hw(visitors, season="multiplicative", h=24)
+
+plot(fitted(visitF1), xlim=c(1985,2008)) # xlim명령이 듣는다.
+lines(visitF1$mean, col="red", lwd=2)
+```
+
+Why is multiplicative seasonality necessary here?
+```{r 4_4}
+# 트렌드가 연도가 증가함에 따라서 올라가는 모양을 보이는 경우 multiplicative모델을 사용하는 것이 효과적이다.
+```
+
+Experiment with making the trend exponential and/or damped.
+```{r 4_5_1}
+visitF2 <- hw(visitors, trend="exponential", season="multiplicative", h=24)
+plot(fitted(visitF2), xlim=c(1985,2008)) # 그냥 season한것과 동일
+lines(visitF2$mean, col="red", lwd=2)
+
+visitF3 <- hw(visitors, trend="exponential", damped=TRUE, season="multiplicative", h=24)
+plot(fitted(visitF3), xlim=c(1985,2008)) # 장기전망이 수평으로 변해 시즈날리티만 남게 된다.
+lines(visitF3$mean, col="red", lwd=2)
+```
+
+Compare the RMSE of the one-step forecasts from the various methods. Which do you prefer?
+```{r 4_6}
+unclass(visitF2)
+sqrt(sum(residuals(visitF1)^2))
+sqrt(sum(residuals(visitF2)^2))
+sqrt(sum(residuals(visitF3)^2)) # 
+```
+
+Now fit each of the following models to the same data:
+- a multiplicative Holt-Winters' method;
+```{r 4_7_1}
+visitF4 <- hw(visitors, season="multiplicative") #자동으로 일정기간은 예측치가 생기기도록 되어있다. season기간의 2배가 default인 모양이다.
+plot(visitF4)
+visitF4$model # 모델을 보면 hw도 ets를 사용하고 있음을 알 수 있다.
+```
+
+- an ETS model;
+```{r 4_7_2}
+visitF5 <- ets(visitors) # ets는 데이터의 특성에 맞는 적정한 지수평활방법 30개중의 하나를 찾아서 그에 적합한 파라미터 조합을 찾아주는 모델이다. 예측은 forecast함수로 해야한다.
+plot(visitF5)
+visitF5cast <- forecast(visitF5, h=24)
+plot(visitF5cast)
+visitF5cast$model #모델도 forecast를 통해서 구해야 한다.
+```
+
+- an additive ETS model applied to a Box-Cox transformed series;
+```{r 4_7_3}
+lambda <- BoxCox.lambda(visitors)
+visitBC <- BoxCox(visitors, lambda)
+plot(visitBC)
+visitF6 <- ets(visitBC, model="AZZ") # additive를 사용하는 모델로 하나는 의미, ZZ는 N, A, M중에서 적절한 것을 ets가 찾아낸다.
+visitF6cast <- forecast(visitF6)
+visitF6cast$model
+plot(visitF6cast)
+```
+
+```{r 4_7_3_1 multiplicative testDrive}
+visitF7 <- ets(visitBC, model="MZZ") # additive를 사용하는 모델로 하나는 의미, ZZ는 N, A, M중에서 적절한 것을 ets가 찾아낸다.
+visitF7cast <- forecast(visitF7)
+visitF7cast$model  # AIC가 additive보다 아주 약간 좋아진다.
+plot(visitF7cast)
+```
+
+
+- a seasonal naive method applied to the Box-Cox transformed series;
+```{r 4_8}
+visitF8 <- meanf(visitBC, h=24)
+plot(visitF8)
+visitF9 <- naive(visitBC, h=24) # h를 1로하면 예측이 안됨
+plot(visitF9)
+visitF10 <- snaive(visitBC, h=24)
+plot(visitF10) # AIC가 400대라서 더 낮은 것 같다.
+unclass(visitF10)
+visitF11 <- rwf(visitBC, drift=TRUE, h=24)
+plot(visitF11)
+```
+
+- an STL decomposition applied to the Box-Cox transformed data followed by an ETS model applied to the seasonally adjusted (transformed) data.
+```{r}
+visitSTL <- stl(visitBC, s.window=12)
+plot(visitSTL)
+visitSeaAdj <- seasadj(visitSTL)
+visitF12 <- ets(visitSeaAdj)
+visitF12cast <- forecast(visitF12)
+plot(visitF12cast)
+visitF12cast$model # seasonality를 제거하니, seasonal이 N으로 자동적으로 계산되어 모델이만들어 졌다. 정말 신기하다....
+```
+
+For each model, look at the residual diagnostics and compare the forecasts for the next two years. Which do you prefer?
+```{r}
+# AIC기준으로는 seasonal naive가 가장 양호한 점수가 나온다. 과연 예측은 쉬운 기법이 더 우월한 경우가 많은가 보다. 캐글의 경우에도 단순한 모델을 평균에 넣는 것이 경험적으로 좋다고 하는 우승자의 말을 본적도 있다.
+```

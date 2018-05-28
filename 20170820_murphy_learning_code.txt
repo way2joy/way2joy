@@ -1,0 +1,72 @@
+---
+
+title: "머신 러닝 @ Kevin_Murphy"
+
+author: "ceo@dataotaku.com"
+
+date: "`r format(Sys.time(), '%Y년 %b월 %d일')`"
+
+
+
+output: 
+
+  beamer_presentation:
+
+    keep_tex: false
+
+    latex_engine: xelatex
+
+    fig_caption: false
+
+    includes:
+
+      in_header: header_pagenrs.tex
+
+---
+
+
+
+
+
+## 1.4.2 KNN (57p) 
+
+
+
+- $mathbf N_K(x, mathbf D)$는 $mathbf D$안에서 x에 대한 K 근접 포인트를 의미한다.
+
+- $mathbb I( mathbf e)$는 Indicator 함수이며,
+
+- 가장 보편적으로 사용되는 거리척도는 피타고라스 정리에서 사용되는 유클리드 거리이다.
+
+
+
+hspace{2cm} $longrightarrow$ structure{GIS에서 많이 쓰는 보로노이 구분(Tesselation)도 K Nearest Neighbors의 적용사례이다.}
+
+
+
+vskip 30pt
+
+
+
+begin{equation} 
+
+mathbf p (y = c | x, mathbf D, K) = frac {1}{K} sum_{i in mathbf N_K(x, mathbf D)}  mathbb I , (y_i = c).
+
+end{equation}
+
+
+
+
+
+begin{equation} 
+
+mathbb I( mathbf e) = begin{cases}
+
+1 hspace{20pt} if ; mathbf e ; is ; true \
+
+0 hspace{20pt} if ; mathbf e ; is ; false
+
+end{cases}
+
+
+end{equation}

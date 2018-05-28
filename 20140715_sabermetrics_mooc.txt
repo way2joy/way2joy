@@ -1,0 +1,158 @@
+제가 듣고 있는 edX강좌중에 Sabermetrics 101(https://www.edx.org/course/bux/bux-sabr101x-sabermetrics-101-1558#.U8RxCJSKUkY)라는 버클리 교수님이 하시는 강좌가 있습니다.
+
+야구관련 통계를 공부하는 거라고 해서, 뭐 크게 도움이 되겠나 싶어서, 잘 안들어가다가
+야구관련 DB를 SQL을 가지고 찾아서 야구에 필요한 통계치를 만드는 툴을 주면서,
+기본적인 쿼리문법을 가르쳐 주는 바람에
+류현진 선수 기록도 있나 하고, 뒤적거리다가 재미가 들려서 결국 다 몰아서 듣고 말았습니다.
+
+그 덕분에 Functional Dependency 등의 DB이론은 모르지만, 기본적인 Query는 날릴 수 있게 되었습니다.
+
+그 여세를 몰아, MySQL도 설치하고 무료로 제공되는 미국 Major league의 유명한 DB들도 다운로드 받아서
+계속 query를 날리는 연습을 하고 있습니다. 
+
+- 간단히 MySQL의 Source 명령문으로 DB에 올릴 수 있도록 데이터가 제공되고 있습니다.
+  유명한 곳으로 lahmann 야구DB(http://www.seanlahman.com/baseball-archive/statistics/)와 
+  retrosheet DB(http://www.baseballheatmaps.com/retrosheet-database-download/)가 있습니다.
+
+  -> Rstudio와 MySQL을 링크시켜주는 RMySQL이라는 패키지도 있다고 합니다만, 저는 인터넷 뒤져서 odbc로
+       연동하여 쓰고 있습니다.
+
+흔히 저희가 타점이라고 하는 것을 영어로는 RBI(Runs Batted In)라고 하고, 득점을 런(Runs)이라고 하는 등,
+지금은 저희 한국말로된 야구 용어도 가물가물한데, 미국 메이저리그 야구를 그것도 데이터로 보면서 재미가 들려서
+야구에 대한 관심도 오히려 더 생겼습니다. (공부해야할 것도 많은데, 취미가 생겨서 조금 곤란합니다. ㅋㅋㅋ)
+
+미국에서는 일반인들도 야구를 과학적으로 해석하는 것을 좋아하는 모양입니다. 다양한 과학적 야구 분석을 표방하는
+사이트들도 많고, 인기도 꽤 얻고 있는 모양이어서 상아탑에서도 과목을 개설하고, 또 MOOC로도 내보내고 하는 것이 겠지요.
+
+매일 매일 Major League 사무국에서 제공하는 데이터를 가지고 Rstudio와 연결하여 야구 분석을 하게 하는 패키지도
+있어서 다운로드 받아서 설치했습니다. openWAR라고 하는데, Wins Above Replacement level이라고 하는데,
+평균적인 메이저 리그 수준보다 약간 낮아서, 퇴출에 임박한 선수들을 일컬어 Replacement level이라고 한답니다.
+
+(참고 블로그 : http://baseballwithr.wordpress.com/2014/03/17/introduction-to-openwar/)
+
+모두 다 데이터분석에 근거해서, 상관관계와 유의수준을  통계적인 유의성을 가지도록 고려해서 정한 수치들이라고 하네요. 
+제가 실력이 짧아 잘 설명은 못드립니다만, sql에 자신있으시고, 야구에 관심있는 분들은 한번 설치해 보셔도 좋을 것 같습니다.
+
+- openWAR 우분투 리눅스 설치 참고
+(https://docs.google.com/document/d/10N1fFrMnzfIqFXhBJI8PcocDImdsqbNlhwPii9-YmM8/edit?usp=sharing)
+
+- openWAR 우분투 윈도우즈 설치 참고
+(https://docs.google.com/document/d/1mYmlPxy7-ms2bueTNSv7PSMQuG_V_EBZtfW8zxz22yY/edit?usp=sharing)
+
+다만 Query를 날릴려면 LA다저스는 LAN이라고 하고, 류현진 선수 선수코드는 ryuhy01이라고 하는 것 등을 알아야 해서
+이런 code들을 사이트에서 제공하는  코드북 텍스트파일을 통해 공부해야 하는 단점이 있습니다. 그리고 DB마다 조금씩 틀려
+각각 따로 찾아서 공부해야 하는 단점이 있습니다만, 관심이 있는 분들에게는 "그까이꺼~" 정도가 아닐까 생각합니다.
+
+배운 것을 가지고, 지난 번 관광빅데이터 분석대회 데이터를 가지고 한번 복습해 보았습니다.
+
+근데 한글 처리 때문에 아주 애먹어서 결국 영어로 바꾸니 sequential arules의 SPADE(Sequential PAttern Discovery using Equivalence classes) algorithm을 소개하는 wikipedia에서 말하는 데이터와 유사한 모습을 데이터가 나오네요.
+그래도 SQL을 활용해서인지, 시행착오를 빼면 아주 짧은 시간만에 거의 100만개가 넘는 데이터를 정리했습니다.
+
+SQL도 모르고 관광빅데이터 분석대회에 나간 건, 순전히 제가 단순(?)하기 때문이란 걸 알게되었습니다. 하하하
+
+SQL이 이렇게 좋은 건지 이제라도 알게되어 다행이라고 생각합니다.
+
+20140715_sqldf 연습
+========================================================
+
+1. sabermetrics 수업에서 배운 SQL 기초지식을 가지고 테스트겸 활용을 해봤는데, 
+상당히 만족스럽다.
+
+- 지난번 관광 빅데이터 분석 대회에서는 이런 방법을 몰라, ftable로 분류를 해서, 합치고
+하는 작업을 하느라, 시간을 물쓰듯 썻는데, 기초적인 query를 사용할 줄 알게 되니까
+상당히 작업시간이 절약된다. 
+
+[데이터 링크](https://drive.google.com/file/d/0By_uRJx10Hlgay1namFPLTNlODQ/edit?usp=sharing)
+
+```{r sequential arule를 위한 데이터 정리}
+load("tourism.RData")
+head(tourism)
+
+tourStat <- sqldf("select id, nation, comeCount, min(clock) as tourStart, max(clock) as tourEnd, count(comeCount) as visitArea
+                 from tourism
+                 group by id, nation, comeCount")
+head(tourStat)
+str(tourStat)
+
+tourList <- aggregate(address ~ id + nation + comeCount, data=tourism, paste0, sep="") 
+head(tourList)
+str(tourList) # address가 List 타입이어서, Sql을 이용할려면 character로 변환 필요
+
+address2 <- as.character(tourList$address)
+head(address2)
+address <- gsub("c|\\(|\\\"|\\)|,","",address2)
+head(address)
+str(address)
+tourPlace <- data.frame(tourList[,1:3],address) # address가 팩터인데 sqldf랑 맞을지...
+tourPlace$address <- as.character(tourPlace$address)
+str(tourPlace)
+head(tourPlace)
+class(tourPlace)
+class(tourStat)
+tourPlace[nchar(tourPlace$address) > 20,]
+
+toruSequence <- merge(x=tourStat, y=tourPlace, by="id")
+tail(tourSequence)
+tourPlace[tourPlace$id == "C_99996",] # 위에서는 제대로 보이는데, 아래에서는 글자가 깨진다.
+
+tourSequence[tourSequence$id == "C_99996",]  # 정말 환장하겠다.
+```
+
+```{r}
+# 한글 문제로 다시 돌아간다. 왜 전희원씨가 윈도우를 가장 쓰기 힘들다고 했는지
+# 느낌이 온다.
+
+library(plyr)
+head(tourism)
+
+tourism$address <- revalue(tourism$address,c("강원"="kangwon",
+                                         "경기"="kyeongki",
+                                         "경남"="kyeingnam",
+                                         "경북"="kyeongbuk",
+                                         "광주"="kwamgju",
+                                         "대구"="daegu",
+                                         "대전"="daejeon",
+                                         "부산"="busan",
+                                         "서울"="seoul",
+                                         "세종"="sejong",
+                                         "울산"="ulsan",
+                                         "인천"="incheon",
+                                         "전남"="cheonnam",
+                                         "전북"="cheonbuk",
+                                         "제주"="jeju",
+                                         "충남"="chungnam",
+                                         "충북"="chungbuk"))
+
+# 근데 대전이 없다고 나온다. 이런이런 이런 실수를 했으니, 떨어졌지.....(하하하)
+# 손으로 무언가를 고칠 때는 정말 신중해야 하는 것 같다.
+# 엔터를무의시적으로 치지 않도록 해야겠다.
+
+head(tourism)
+
+tourStat <- sqldf("select id, nation, comeCount, min(clock) as tourStart, max(clock) as tourEnd, count(comeCount) as visitArea
+                 from tourism
+                 group by id, nation, comeCount")
+head(tourStat)
+
+tourList <- aggregate(address ~ id + nation + comeCount, data=tourism, paste0, sep="") 
+head(tourList)
+str(tourList)
+
+address2 <- as.character(tourList$address)
+head(address2)
+address <- gsub("c|\\(|\\\"|\\)|,","",address2)
+head(address)
+str(address)
+
+tourPlace <- data.frame(tourList[,1:3],address) # address가 팩터인데 sqldf랑 맞을지...
+tourPlace$address <- as.character(tourPlace$address)
+head(tourStat)
+
+tourSequence <- sqldf("select a.id as id, a.nation as nation, a.tourStart as tourStart, a.visitArea as visitArea, b.comeCount as comeCount, b.address as seqArea
+                      from tourStat as a, tourPlace as b
+                      where a.id = b.id and a.comeCount = b.comeCount")
+head(tourSequence)
+tail(tourSequence)
+
+# sql을 써서 해서인지 확실히 프로그램 길이도 짧아지고, 속도는 말할 것없이 빠르다.
+```

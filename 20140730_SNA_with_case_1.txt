@@ -1,0 +1,507 @@
+사회 연결망 분석을 허명회 교수님이 지으신 "R을 활용한 사회네트워크 분석 입문"으로
+공부하다가, 개념들이 어렵기만 하고, 지나치다 싶게 축약된 설명이 이해하기 어렵기도 해서 
+조금 재미있게 할 방법이 없을까 고민하다가,
+
+인터넷에서 신상품 추천을 위한 사회연결망분석의 활용이라는 논문을 보고,
+재미있겠다 싶어서, R로 간략하게 구현을 해보았습니다.
+
+보통 이런 학술논문들에서 이렇게 예제까지 넣어서 설명해주는 경우는 많지 않은데,
+구현하는데 시간은 걸렸지만, 실제로 뭔가를 추천하는 것 같은 느낌이 재미있었습니다.
+
+저자 분들에게 감사드립니다.
+
+SNA with case (1)
+========================================================
+1. R을 활용한 사회네트워크분석 입문
+
+```{r ch_1}
+A <- matrix(0,5,5)
+edgeList <- matrix(c(1,2,1,3,1,5,2,3,3,1,3,4,5,1), byrow=T, nrow=7, ncol=2)
+A[edgeList] <- 1
+rownames(A) <- paste0("M",1:5)
+colnames(A) <- paste0("M",1:5)
+A
+gplot(A, displaylabels=T, boxed.labels=F, vertex.cex=1,arrowhead.cex=2)
+A2 <- A %*% A
+A
+A2
+A3 <- A2 %*% A
+A4 <- A3 %*% A
+A5 <- A4 %*% A
+
+geodist(A) # $count는 무엇인가? reachability와 같다. 우연인가?
+#최단거리 매트릭스 구하는 함수
+(D <- geodist(A)$gdist)
+apply(D,1,sum)
+apply(D,2,sum)
+#네트워크 연결선수를 구하는 함수
+degree(A)
+degree(A, cmode="indegree")
+degree(A, cmode="outdegree")
+#네트워크 밀도를 구하는 함수
+gden(A)
+#도달가능성
+reachability(A)
+components(A)
+
+#임의의 네트워크 생성
+(B <- rgraph(10, tprob=0.2)) #노드간의 연결은 베르누이분포를 따름.
+(C <- rgraph(10, tprob=0.5))
+components(B)
+components(C)
+geodist(B)
+reachability(B)
+geodist(C)
+reachability(C)
+gden(B)
+gden(C)
+
+gplot(B)
+gplot(C)
+
+component.dist(B)
+component.dist(C)
+```
+
+```{r Ch_1_smallWorld}
+n <- 100 # 전체 구성원의 수
+N <- n*(n+1)
+mu <- 5 #각 구성원이 평균적으로 아는 사람의 수
+world <- rgraph(n+1, tprob=mu/n)
+D <- geodist(world)$gdist
+# D
+# table(D)
+diag(D) <- NA
+median(D, na.rm=T) # 구성체의 크기가 기하급수적으로 증가하더라도, 두사람간의 거리는 아주 천천히 증가한다.
+addmargins(round(table(D)/N*100,1))
+```
+
+```{r Ch_1_Exercises}
+#1
+E <- matrix(0,5,5)
+edgeList <- matrix(c(1,2,1,3,1,5,
+                     2,1,2,3,
+                     3,1,3,2,3,4,
+                     4,3,5,1), byrow=T, nrow=10, ncol=2)
+E[edgeList] <- 1
+rownames(E) <- paste0("E",1:5)
+colnames(E) <- paste0("E",1:5)
+
+degree(E)
+degree(E, cmode="indegree")
+
+gden(E)
+components(E)
+geodist(E)
+apply(E, 1, sum) # central start node.
+apply(E, 2, sum) # central end node
+```
+
+```{r}
+G <- rgraph(10, tprob=0.2)
+components(G)
+component.dist(G)
+table(component.dist(G)$membership) # 각 콤포넌트 구성원 수의 합임.
+geodist(G)
+gplot(G, displaylabel=T, boxed.labels=F)
+```
+
+```{r}
+n <- 1000 # 전체 구성원의 수
+N <- n*(n+1)
+mu <- 10 #각 구성원이 평균적으로 아는 사람의 수
+world <- rgraph(n+1, tprob=mu/n)
+D <- geodist(world)$gdist
+# D
+# table(D)
+diag(D) <- NA
+median(D, na.rm=T) # 구성체의 크기가 기하급수적으로 증가하더라도, 두사람간의 거리는 아주 천천히 증가한다.
+addmargins(round(table(D)/N*100,1))
+
+# mu=10, 평균 최단거리도 2로 줄어들고, 전체적인 최단거리 분포도 4가지로 줄었다.(원래는 3에 6가지)
+#n=1000으로 하니, 3,5가 되었다.(다시 늘어났다.)
+```
+
+```{r Ch_2_Centrality}
+# 중심성은 통계자료의 평균과 분산에 해당하는 중요한 개념이다.
+# 근접중심성 : closeness centrality
+# 해당노드와 다른 노드간 평균 최단거리의 역수
+# 들어오는 방향은 나가는 방향을 계산하는 인접메트릭스를 transpose하여 구한다.
+data(package="sna")
+
+L <- matrix(c(0,0,0,1,0,0,0,0,0,
+              0,0,0,1,0,0,0,0,0,
+              0,0,0,1,0,0,0,0,0,
+              1,1,1,0,1,0,0,0,0,
+              0,0,0,1,0,1,0,0,0,
+              0,0,0,0,1,0,1,0,0,
+              0,0,0,0,0,1,0,1,0,
+              0,0,0,0,0,0,1,0,1,
+              0,0,0,0,0,0,0,1,0), byrow=T, nrow=9)
+L
+gplot(L)
+round(closeness(L),2)
+round(closeness(L, cmode="suminvundir"),2)
+L1 <- add.isolates(L,1) # 고립된 노드를 하나 추가함.
+L1
+round(closeness(L1),2)
+round(closeness(L1, cmode="suminvdir"),2)
+```
+
+```{r Knoke case}
+Knoke <- matrix(c(0,1,0,0,1,0,1,0,1,0,
+                  1,0,1,1,1,0,1,1,1,0,
+                  0,1,0,1,1,1,1,0,0,1,
+                  1,1,0,0,1,0,1,0,0,0,
+                  1,1,1,1,0,0,1,1,1,1,
+                  0,0,1,0,0,0,1,0,1,0,
+                  0,1,0,1,1,0,0,0,0,0,
+                  1,1,0,1,1,0,1,0,1,0,
+                  0,1,0,0,1,0,1,0,0,0,
+                  1,1,1,0,1,0,1,0,0,0), byrow=T, nrow=10)
+Knoke
+rownames(Knoke) <- c("COUN", "COMM", "EDUC", "INDU", "MAYR", "WRO", "NEWS", "UWAY", "WELF", "WEST")
+gplot(Knoke, displaylabels=T, boxed.labels=F)
+round(closeness(Knoke),2) # 나가는 방향 기준
+round(closeness(t(Knoke)),2) # 나가는 방향 기준
+round(closeness(Knoke, cmode="suminvdir"),2) # 나가는 방향 기준
+t(Knoke)
+round(closeness(t(Knoke), cmode="suminvdir"),2) # 들어오는 방향 방향 기준
+```
+
+```{r Betweenness centrality}
+M <- matrix(0,9,9)
+M1 <- c(0,rep(1,8))
+M[1,] <- M1
+M[,1] <- t(M1)
+M
+gplot(M)
+betweenness(M)
+round(betweenness(M),2)
+``` 
+
+```{r two star}
+twostars <- matrix(0,13,13)
+edges <- matrix(c(1,2,1,3,1,4,1,5,1,6,
+                  6,7,7,8,8,13,9,13,10,13,11,13,12,13),
+                byrow=T, ncol=2)
+twostars[edges] <- 1
+twostars <- twostars + t(twostars) - twostars*t(twostars)
+gplot(twostars)
+betweenness(twostars)
+round(closeness(twostars),2)
+round(closeness(twostars, cmode="suminvdir"),2)
+round(closeness(t(twostars)),2)
+round(closeness(t(twostars), cmode="suminvdir"),2)
+```
+
+```{r Eigenvector centrality}
+# 중요한 노드에연결된 노드가 중요하다. (그래서 위세떤다는 의미에서 위세 중심성이라고 하는가?)
+
+# evcent
+rownames(Knoke)
+round(evcent(Knoke),2) #나가는 방향 행->열
+round(evcent(t(Knoke)),2) # 들어오는 방향 열 -> 행
+```
+
+```{r Ch_2_Exercises}
+Kmoney<- matrix(c(0,0,1,0,1,0,0,1,1,1,
+                  0,0,1,0,0,0,0,0,0,0,
+                  0,0,0,0,0,0,0,1,0,0,
+                  0,1,1,0,0,0,1,1,1,0,
+                  0,1,1,0,0,0,0,1,1,0,
+                  0,0,0,0,0,0,0,0,0,0,
+                  0,1,0,0,0,0,0,1,0,0,
+                  0,0,0,0,0,0,0,0,1,1,
+                  0,0,1,0,0,0,0,1,0,0,
+                  0,0,0,0,0,0,0,0,0,0), byrow=T, nrow=10)
+
+rownames(Kmoney) <- c("COUN", "COMM", "EDUC", "INDU", "MAYR", "WRO", "NEWS", "UWAY", "WELF", "WEST")
+Kmoney
+gplot(Kmoney, displaylabels=T, boxed.labels=FALSE)
+round(closeness(Kmoney, cmode="suminvdir"),2)
+round(closeness(t(Kmoney), cmode="suminvdir"),2)
+betweenness(Kmoney)
+round(evcent(Kmoney),2)
+degree(Kmoney)
+graphcent(Kmoney) #그래프상에 도달가능하지 않은 점이 있으면 0이 됨.
+```
+
+```{r Ch_3_subgroups}
+install.packages("ergm")
+data(package="ergm")
+library(ergm)
+data(faux.magnolia.high)
+fmh <- faux.magnolia.high
+fmh
+names(unclass(fmh))
+summary(fmh)
+gden(fmh) # 학생들간의 서로 알고지내는 상대빈도가 매우 낮다.
+gtrans(fmh)
+grecip(Knoke, measure="edgewise")
+
+#3자간 관계 분석
+triad.census(Knoke)
+triad.census(Kmoney)
+
+fmh <- as.sociomatrix(fmh)
+head(fmh,1)
+table(fmh)
+gplot(fmh)
+components(fmh)
+fmhComp <- component.dist(fmh)
+table(fmhComp$csize)
+
+#동아리 : 상호직접연결되는 노드들의 집합
+#컴포넌트는 파티션이다. 그러나 동아리는 아니다.
+
+fmhClique <- clique.census(fmh, clique.comembership="bysize")
+str(fmhClique$cliques)
+coreList <- c(122,183,530, 1143, 1160)
+fmhComp$membership[coreList] # 최대 동아리가 소속되어 있는 콤포넌트를 찾는다.
+fmh[coreList, coreList] #그중에서 최대동아리 소속멤버만 따로 뽑아 인접메트릭스를 만든다.
+
+sort(geodist(fmh)$gdist[122,])[2:439] # 특정학생의 최단거리경로수를 뽑아서 소팅을 하면 자기자신은 1번으로오게된다. 그래서 나머지 콤포턴트만 뽑을려면 2번에서 마지마까지의 번호만 추출하면된다. 콤포넌트가 아닌 경우는 연결이 안되므로 모두 inf가 나온다.
+summary(sort(geodist(fmh)$gdist[122,])[2:439])[-4] #summary 에서 mean 수치를 제외하는 이유는?....??
+```
+
+```{r}
+#근사적 동치성 : Hamming거리를 이용해서 측정함.
+p1 <- runif(10,0,1)
+p2 <- runif(10,0,1)
+sapply(p1, rep,10)
+g1 <- rgraph(10,tprob = sapply(p1,rep,10))
+g1
+g2 <- rgraph(10, tprob= t(sapply(p2, rep,10)))
+g2
+g3 <- g1*g2
+g3
+sedist(g3, method="hamming")
+cluster <- equiv.clust(g3, method="hamming", cluster.method="complete")
+plot(cluster)
+
+#block model
+blockModel <- blockmodel(g3, cluster, h=2.5)
+plot(blockModel)
+```
+
+
+Case1) 근데 너무 재미가 없어서 좀 재미있게 할려고 Case를 찾아봤다.
+구글링하면 구할 수 있다.
+[신상품 추천을 위한 사회연결망분석의 활용](https://www.google.co.kr/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&ved=0CCAQFjAA&url=http%3A%2F%2Fjiisonline.evehost.co.kr%2Ffiles%2FDLA%2F11-15-4.pdf&ei=sSjYU7epKcuwuATttYHABw&usg=AFQjCNEGEujyVCuY8L0khWUEor4RgQYn6w&sig2=3YujIB76nyXg9nKCy2nGeg&bvm=bv.71778758,d.c2E&cad=rjt)
+
+
+2. 보통 이런 유형의 논문을 읽기가 쉽지 않은데, 이 분들의 경우에는 간략한 모형을 만들어 먼저 구현하는 방법을 보여주시기 때문에 상대적으로 수월하게 이해할 수 있다.
+
+1) data
+```{r 2_data}
+purchase <- matrix(0,10,10)
+edges <- matrix(c(1,2,1,3,1,4,1,8,
+                  2,5,2,6,2,7,
+                  3,1,3,2,3,3,3,4,3,6,3,7,3,8,3,9,
+                  4,1,4,2,4,5,4,6,4,8,4,10,
+                  5,1,5,2,5,4,5,6,5,7,5,8,5,10,
+                  6,3,6,9,
+                  7,6,
+                  8,2,8,4,8,6,8,7,8,10,
+                  9,1,9,2,9,6,9,7,9,8,9,10,
+                  10,1,10,2,10,4,10,5),
+                byrow=T, ncol=2)
+purchase[edges] <- 1
+colnames(purchase) <- paste0("p", 1:10)
+rownames(purchase) <- paste0("c", 1:10)
+purchase
+```
+
+2) 구매유사도 분석
+
+[코사인유사도 참조](http://books.google.co.kr/books?id=732hAgAAQBAJ&pg=PT395&lpg=PT395&dq=%EC%BD%94%EC%82%AC%EC%9D%B8+%EC%9C%A0%EC%82%AC%EB%8F%84+%EC%98%88%EC%A0%9C&source=bl&ots=DMLqr44V0Y&sig=N3eI9EQ-1q_560lxyWDMx5yIDSw&hl=ko&sa=X&ei=sTPYU_nXAsy6uASczYIo&ved=0CE8Q6AEwBQ#v=onepage&q=%EC%BD%94%EC%82%AC%EC%9D%B8%20%EC%9C%A0%EC%82%AC%EB%8F%84%20%EC%98%88%EC%A0%9C&f=false)
+```{r 2_2_purchase similiarity}
+# 구매유사도를 상관관계로 분석
+pSimilar <- cor(purchase)
+pSimilar
+round(pSimilar,3)
+pairs(purchase) #이건 그림이 좀 이상하다. indicator매트릭스에는 맞지 않는다.
+
+# 빅데이터의 세상에서 상관관계로 구매유사도를 분석하는 건, 좀 아닌 것 같다. 코사인유사도 정도는 되어야 하지 않을까?
+# 위 링크 도서를 참조하여 코사인 유사도 로직 구현
+
+data <- t(purchase) # 상품기준으로 하기위해 데이터를 transpose했다.
+data
+cosSimilar <- matrix(0, dim(data)[1], dim(data)[1])
+colnames(cosSimilar) <- paste0("p",1:dim(data)[1])
+rownames(cosSimilar) <- paste0("p",1:dim(data)[1])
+
+for (i in 1:dim(data)[1]) {
+  for (j in 1:dim(data)[1]) {
+    up <- t(data[i,]) %*% data[j,] # sum(xi*yi)
+    bottomA <- sum(data[i,]^2)     # sum(xi^2)
+    bottomB <- sum(data[j,]^2)     # sum(yi^2)
+    bottom <- sqrt(bottomA) %*% sqrt(bottomB)
+    cosSimilar[i,j] <- up / bottom
+  }  
+}
+round(cosSimilar,3)
+```
+
+3) 상품네트워크 구성
+- 구매유사도가 일정수준 이상인 제품 들만 모아서 상품 네트워크를 구성한다.
+- 논문에서는 0.2를 사용했다.
+```{r 2_3_product network setup}
+pNetwork <- ifelse(pSimilar>=0.2, 1,0)
+pNetwork
+cosNetwork <- ifelse(cosSimilar >= 0.5,1,0)
+cosNetwork # 단순상관관계에 비해서 훨씬 많아서, 기준값을 조정.
+library(sna)
+gplot(pNetwork, displaylabels=T, boxed.labels=F) # 이상하다. 왜 user기준이 아니라 가격기준이 나오지????
+gplot(cosNetwork, displaylabels=T, boxed.labels=F) # user기준이 맞나? 상품기준이 맞나? 저자의 의도는 상품기준인 것 같다. 
+```
+
+4) 중심성 분석
+
+```{r 2_4_centrality analysis}
+# 연결정도 중심성
+(resDegree <- degree(pNetwork) )
+degree(cosNetwork)
+degree(pNetwork, cmode="indegree")  # 1/2/8/10번이 동등한 수준이다.
+degree(cosNetwork, cmode="indegree") # 1/8번 상품이 가장 중심적이다.
+## 연결정도 중심상품군 설정
+(degreePnet <- data.frame(rownames(pNetwork),resDegree))
+orderDegree <- degreePnet[order(resDegree, decreasing=T),]
+finalDegree <- paste(orderDegree[,1][1:4])
+
+# 근접 중심성
+resClose <- round(closeness(pNetwork),2) # 8/1/2
+round(closeness(cosNetwork),2) # 8/1/4
+
+round(closeness(pNetwork, cmode="suminvdir"),2) # 8/1/2
+round(closeness(cosNetwork, cmode="suminvdir"),2) # 8/1/4
+
+## 연결정도 중심상품군 설정
+(closePnet <- data.frame(rownames(pNetwork),resClose))
+orderClose <- closePnet[order(resClose, decreasing=T),]
+finalClose <- paste(orderClose[,1][1:4])
+
+# 매개 중심성
+resBetween <- betweenness(pNetwork) #8/3/1
+betweenness(cosNetwork) # 1/3/8
+
+## 연결정도 중심상품군 설정
+(betweenPnet <- data.frame(rownames(pNetwork),resBetween))
+orderBetween <- betweenPnet[order(resBetween, decreasing=T),]
+finalBetween <- paste(orderBetween[,1][1:4])
+
+
+# 위세 중심성
+resEv <- round(evcent(pNetwork),3) # 10/8/1
+round(evcent(cosNetwork),3) # 8/1/2
+
+## 연결정도 중심상품군 설정
+(evPnet <- data.frame(rownames(pNetwork),resEv))
+orderEv <- evPnet[order(resEv, decreasing=T),]
+finalEv <- paste(orderEv[,1][1:4])
+finalEv
+```
+
+4) 고객추천
+- 중심상품을 적어도 한개이상 구매한 고객중에서 pls값이 높은 고객을 대상으로 상품 추천.
+
+@논문
+식 (8)에서 pcj는 고객 c의 상품 j에 대한 구매여
+부를 나타내며, cen(j)는 상품 j의 중심성값, C는
+단계 3에서 선택된 K개의 중심상품을 의미한다.
+K개의 중심상품을 구매한 고객들 각각에 대하
+여 pls 값을 계산한 후 값이 큰 순으로 정렬하여
+상위 N명의 고객에게 신상품을 추천한다.
+
+___ 값이 크다는 이야기는 그 중심성과 통하는 것이 많다는 것이므로,
+그중 안산 상품을 살 가능성이 높다는 의미인 것 같다. ___
+
+```{r 2_4_recommendation}
+# pls지표 구성
+# sum(고객의 중심상품j구매여부 * 중심상품j의 중심성지표)/sum(중심상품의 중심성 지표)
+# 중심상품 전체의 중심성지표 합에 대한 고객이 구매한 상품의 중심성지표 합계의 비율이다.
+# 겨우 10고객이지만 중심상품군의 대상이 되는 고객을 자동으로  선택하고, 추천하는 알고리즘을 만드는 건, 쉽지 않다.
+purchase
+
+#연결정도 중심성 기준
+degreeWhich <- which(colnames(purchase) %in% finalDegree)
+# repmat <- function(x, n, m) {kronecker(matrix(1,n,m),x)}
+(plsDegree <- purchase[,degreeWhich] %*% resDegree[degreeWhich])
+(plsDegree <- data.frame(plsDegree, rank(plsDegree)))
+recommendData <- purchase[plsDegree[,2]>=dim(plsDegree)[1]-3,degreeWhich]
+(row <- which(recommendData == 0) %% nrow(recommendData))
+row <- ifelse(row == 0,5,row)
+(column <- round(which(recommendData == 0) / nrow(recommendData),0))
+column <- ifelse(column < 1,1,column)
+paste0(rownames(recommendData)[row],"고객님. 저희 ", colnames(recommendData)[column],"상품이 관련 고객님들께 아주 인기가 많씁니다. 한번 써보시지요")
+```
+
+```{r}
+# 근접 중심성 기준
+closeWhich <- which(colnames(purchase) %in% finalClose)
+# repmat <- function(x, n, m) {kronecker(matrix(1,n,m),x)}
+(plsClose <- purchase[,closeWhich] %*% resClose[closeWhich])
+(plsClose <- data.frame(plsClose, rank(plsClose)))
+recommendData <- purchase[plsClose[,2]>=dim(plsClose)[1]-3,closeWhich]
+(row <- which(recommendData == 0) %% nrow(recommendData))
+row <- ifelse(row == 0,5,row)
+(column <- round(which(recommendData == 0) / nrow(recommendData),0))
+column <- ifelse(column < 1,1,column)
+paste0(rownames(recommendData)[row],"고객님. 저희 ", colnames(recommendData)[column],"상품이 관련 고객님들께 아주 인기가 많씁니다. 한번 써보시지요")
+```
+
+```{r}
+# 매개 중심성 기준
+BetweenWhich <- which(colnames(purchase) %in% finalBetween)
+# repmat <- function(x, n, m) {kronecker(matrix(1,n,m),x)}
+(plsBetween <- purchase[,BetweenWhich] %*% resBetween[BetweenWhich])
+(plsBetween <- data.frame(plsBetween, rank(plsBetween)))
+(recommendData <- purchase[plsBetween[,2]>=dim(plsBetween)[1]-3,BetweenWhich])
+(row <- which(recommendData == 0) %% nrow(recommendData))
+row <- ifelse(row == 0,5,row)
+(column <- round(which(recommendData == 0) / nrow(recommendData),0))
+column <- ifelse(column < 1,1,column)
+paste0(rownames(recommendData)[row],"고객님. 저희 ", colnames(recommendData)[column],"상품이 관련 고객님들께 아주 인기가 많씁니다. 한번 써보시지요")
+```
+
+```{r}
+# 위세 중심성 기준
+EvWhich <- which(colnames(purchase) %in% finalEv)
+# repmat <- function(x, n, m) {kronecker(matrix(1,n,m),x)}
+(plsEv <- purchase[,EvWhich] %*% resEv[EvWhich])
+(plsEv <- data.frame(plsEv, rank(plsEv)))
+recommendData <- purchase[plsEv[,2]>=dim(plsEv)[1]-3,EvWhich] 
+(row <- which(recommendData == 0) %% nrow(recommendData))
+row <- ifelse(row == 0,5,row)
+(column <- round(which(recommendData == 0) / nrow(recommendData),0))
+column <- ifelse(column < 1,1,column)
+paste0(rownames(recommendData)[row],"고객님. 저희 ", colnames(recommendData)[column],"상품이 관련 고객님들께 아주 인기가 많씁니다. 한번 써보시지요")
+```
+
+@논문
+각 중심성 지표 별로, 중심상품 수 K를 1에서
+가능한 값(이 실험에서 근접 중앙성의 경우는 0.5,
+0.1, 0 등 3가지 값만 측정됨)까지 변화시켜가면서,
+학습기간에 K개의 중심상품을 구매한 고객 중에
+몇 명이 신상품 구매고객이 되었는지, 즉 적중률
+(hit ratio)을 측정하였다
+
+...중심성 측정 지표에 따라 적중률에 있
+어 분명한 차이가 있다는 것을 알 수 있다. 적중률
+최대치를 기준으로 할 때, ‘연결정도 중심성’이 약
+34.5%로 가장 높고, ‘매개 중심성’과 ‘위세 중심성’
+이 각각 26.5%와 25.9%로 거의 비슷하며, ‘근접 중
+심성’이 16.8%로 가장 낮다. 적중률 34.5%의 의미
+는 3명에게 신상품을 추천했을 때 그 중 한 명은
+신상품을 구입한다는 것으로 상당히 높은 추천 성
+능을 나타낸다. 또한 ‘연결정도 중심성’은 다른 중
+심성 지표에 비해 중심상품의 수에 따라 적중률이
+많이 변화하고 있음을 보여주고 있다. 이는 ‘연결
+정도 중심성’이 다른 지표에 비해 측정값(degree)
+이 연속적이고 이에 따른 노드의 분포도 어느 정
+도 산재해 있기 때문으로 판단된다. 극단적으로
+‘근접 중심성’은 측정값(nCloseness)이 적고 비연
+속적이어서 중심상품의 수에 따른 적중률에 차이
+가 없다는 것이 이를 입증한다고 볼 수 있다
+ 

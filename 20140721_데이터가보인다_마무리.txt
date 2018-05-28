@@ -1,0 +1,617 @@
+기왕에 시작한 일이라 끝을 내는 게 좋을 것 같아서,
+마지막으로 선형계획법과 주성분분석 내용을 추가해서 올립니다.
+
+(사용하는 기법이 고도화될 수록 계산은 되는데, 의미를 파악하지 못하는 경우가
+ 생겨서 의외로 지연되었습니다. 정말 쉬운게 하나도 없네요.) 
+
+이 이후에 나오는 부분은 데이터 마이닝 등 난이도가 높은 내용이라 저자 분들도 개념위주로
+설명했기 때문에 R로 만들 만한 내용이 없었습니다.
+
+굳이 한다면 다른 데이터들을 모아서 진행을 해야하는 부분들인 것 같아서,
+지금 하고 있는 공부와 연계하는 것이 좋을 것이라는 판단이 들어
+이번 포스팅으로 마무리 하고자 합니다. 
+
+데이터가 보인다(3) - Rmd Translation
+========================================================
+
+12. Fan chart
+
+- 수치 성장이나 하락 등의 변화를 백분율로 표시하는 그래프
+- 가격 트렌드 분석에 의한 상한가 저항선, 하한가 저항선
+- 기업, 사업, 제품, 고객등의 증가, 감소율을 값이 크고 작음에 관계없이 현저한 증가 혹은 감소경향이 있는 항목을 분명히 하는데 사용된다.
+
+```{r 12_1_Fan chart}
+# 데이터준비
+quarter <- paste0("q_",1:4)
+segA <- c(1600,1760,1936,2130)
+segB <- c(800,960,1152,1382)
+segC <- c(400,520,676,879)
+segD <- c(200,280,392,549)
+segE <- c(100,150,225,338)
+segRev <- data.frame(quarter, segA, segB, segC, segD, segE)
+matplot(segRev, type="b")
+
+repmat <- function(a,n,m) {kronecker(matrix(1,n,m), a)}
+
+# kronecker함수는 반드시 숫자 매트릭스를 전달해야 한다.
+# 잊기 쉬우니까 조심해야 한다.
+segFan <- segRev[,2:dim(segRev)[2]] / repmat(as.matrix(segRev[1,2:dim(segRev)[2]]), nrow(segRev), 1)
+
+segFan
+matplot(segFan, type="b")
+
+# 매출액은 낮지만 성장율은 segD가 가장 높다는 것을 알 수있다.
+# 단기적으로 매출을 늘릴려면 성장률이 높은 사업부에 투자하는 것이 바람직할 것이다.
+``` 
+
+13. 지수평활법
+- 전기의 실적값과 예측값의 가중평균을 기반으로 당기 예측을 계산하는 시계열 분석
+- 실적값의 추이를 smoothing해서 예측하고, 가중치는 exponential하게 산출한다고 해서 exponential smoothing이라는 이름을 가지게 된 것같다.
+- 오래된 데이터일수록 가중치가 적어지고, 비교적 단기예측에 효과가 있다는 평가를 받고 있으며, 가장 널리 사용되는 예측기법이다.
+
+- 주가변동의 EMA 계산
+- 매출경향 분석
+- 정기발주 방식에서의 재고 수요 예측
+
+```{r 13_1_exponential smoothing}
+# 데이터 생성
+month <- c(rep("2012_4",9),rep("2012_5",9), rep("2012_6",9), rep("2012_7",9), rep("2012_8",9), rep("2012_9",9) )
+month
+product <- c(rep((c(rep("맥주",3),rep("와인",3),rep("소주",3))),6))
+product
+channel <- c(rep(c("A_슈퍼", "B_편의점", "C_주점"),6*3))
+channel
+sTarget <- rep(c(200000,150000,100000,150000,100000,50000,100000,100000,50000),6)
+sTarget
+sRevenue <- c(c(250000,100000,50000,50000,75000,25000,100000,75000,25000), c(300000,150000,70000,65000,65000,20000,105000,80000, 30000), c(150000,50000,30000,40000,55000,35000,80000,60000, 50000), c(350000,150000,80000,30000,55000,35000,80000,65000, 40000), c(150000,80000,60000,90000,45000,20000,70000,55000, 15000),c(20000,50000,80000,70000,95000,15000,30000,0,10000))
+sRevenue
+
+salesBev <- data.frame(month,product,channel,sTarget,sRevenue)
+salesBev
+
+# 월별 목표와 반기실적
+# 7월에 반짝하다가 
+salesRmonth <- tapply(salesBev$sRevenue,salesBev$month,sum)
+salesTmonth <- as.integer(tapply(salesBev$sTarget,salesBev$month,sum))
+salesTmonth
+growthRate <- salesRmonth/salesTmonth
+salesTable <- data.frame(salesTmonth, salesRmonth, growthRate)
+dummy <- apply(salesTable,2,sum)
+salesTable <- rbind(salesTable, dummy)
+salesTable 
+# 백만단위가 넘어가면 숫자표시가 자꾸 달라진다.
+# 엑셀에서 자동으로 만들어주는 표들도 다 이런 걸, 잘 프로그램해서
+# 그렇게 나오는 거 였구나....
+
+rownames(salesTable)[7] <- "분기 합계"
+salesTable
+
+# 정렬방법이 영어나 한글이냐에 따라 바뀐다. 왜그러지? 
+# 어디서 통제를 하는지 궁금하다.
+
+colnames(salesTable) <- c("영업목표", "영업실적","달성율")
+salesTable$영업목표 <- as.integer(salesTable$영업목표)
+salesTable$달성율 <- paste0((salesTable$영업실적/salesTable$영업목표)*100,"%")
+salesTable  # 역시 한글과 영어가 표현되는 것이 다른다.
+
+# 표하나 만드는데, 이렇게 까지 해야하는구나...
+salesTable$달성율 <- paste0(sprintf("%.1f",(salesTable$영업실적/salesTable$영업목표)*100),"%")
+salesTable
+
+# 쉽게 갈 방법은 별로 없는 듯하다.
+table(salesTable) # 이상하게 나온다.
+# 그냥 뭐 이정도까지만...
+```
+@sprintf 참조
+sprintf("%f", pi)         # "3.141593"
+sprintf("%.3f", pi)       # "3.142"
+sprintf("%1.0f", pi)      # "3"
+sprintf("%5.1f", pi)      # "  3.1"
+sprintf("%05.1f", pi)     # "003.1"
+sprintf("%+f", pi)        # "+3.141593"
+sprintf("% f", pi)        # " 3.141593"
+sprintf("%-10f", pi)      # "3.141593  "   (left justified)
+sprintf("%e", pi)         #"3.141593e+00"
+sprintf("%E", pi)         # "3.141593E+00"
+sprintf("%g", pi)         # "3.14159"
+sprintf("%g",   1e6 * pi) # "3.14159e+06"  (exponential)
+sprintf("%.9g", 1e6 * pi) # "3141592.65"   ("fixed")
+sprintf("%G", 1e-6 * pi)  # "3.14159E-06"
+
+```{r}
+# ...할려고 하였으나, 자꾸 이런문제가 나와서 방법을 찾아야 했음.
+confidence <- sample(c("A","B","C","D"),54,replace=TRUE)
+salesBev$confidence <- confidence
+salesBev
+
+graphSales <- xtabs(sTarget ~ month+product+confidence, data=salesBev)
+(graphConf <- ftable(graphSales, row.vars = "month"))
+
+# 열집계 순서 변경도 가능함.
+(graphConf <- ftable(graphSales, row.vars = "month", col.vars = c("confidence","product")))
+
+margin.table(graphSales, 1) # 테이블을 만들때 그룹핑 변수였던, month의 합계가 나옴.
+margin.table(graphSales, 2) # 두번째 product의 합계가 나옴.
+margin.table(graphSales, 3) # 세번째 confidence의 합계가 나옴.
+
+prop.table(graphSales, 1) # .
+prop.table(graphSales, 2) # .
+prop.table(graphSales, 3) # .
+
+# 한개의 수치를 가지고 여러개로 그룹핑은 되는데, 2개 이상을 피벗테이블 처럼하는 것은 안되는 것같다.
+graphSales2 <- xtabs(sTarget+sRevenue ~ month+product+confidence, data=salesBev)
+graphSales2 
+
+# 표 모양으로 만드는 것을 ftable이라는 함수를 사용한다.
+# row.vars나 col.vars 아규먼트로 표의 x축과 y축의 설정이 가능하다.
+(graphMonth <- ftable(graphSales2, row.vars = "month"))
+
+# 표 만드는 것이 절차가 복잡하다. 보기는 편해도. 
+# 데이터 작업이 다 그런 것 같다.
+```
+
+@테이블 핸들링 하는 함수 들
+mytable <- table(A,B) # A will be rows, B will be columns 
+mytable # print table 
+
+margin.table(mytable, 1) # A frequencies (summed over B) 
+margin.table(mytable, 2) # B frequencies (summed over A)
+
+prop.table(mytable) # cell percentages
+prop.table(mytable, 1) # row percentages 
+prop.table(mytable, 2) # column percentages
+
+```{r 13_2_graphics}
+salesExpect <- xtabs(sRevenue ~ channel+confidence, data=salesBev)
+(tableExpect <- ftable(salesExpect, row.vars="channel"))
+# beside 아규먼트로 그래프를 나란히 그린다.
+barplot(tableExpect, beside=TRUE) 
+#그래프와 레전드의 오브젝트를 틀리게 입력해야 한다. 주의 필요.
+barplot(tableExpect, legend=rownames(salesExpect)) 
+```
+
+14. RFM분석 (Recency 최종구입시기, Frequency 구입빈도, Monetary 구입금액)
+
+- 3가지 고객데이터를 단면차원으로 변화시켜서 수행하는 다차원분석의 일종
+- 마케팅분야에서 고객의 구매동향 분석이나 고객 세그멘테이션에 자주 사용됨.
+
+```{r 14_1_RFM multidimensional analysis}
+# 데이터 준비
+load("shopAmount.RData")
+months(head(shopAmount$clock))
+# month가 아니라 months이어야만 한다.(개발자가 영문법에 능한갑다..)
+# years 이런 건 안된다. months만 된다. (왜 이렇게 만들었을까?)
+
+head(shopAmount)
+hist(shopAmount$purchase)
+
+# 해외 관광객의 고객의 특성에 따라 3개월간 면세점 구매고객 20여만명의
+# 가상 매출 데이터를 가지고 고객 특성을 분석해 본다.(랜덤하게 숫자를 넣어서
+# 잘 나올지 모르겠다.)
+
+# SQL로 하면 170만여개의 27만 고객별 RFM은 몇줄이면 끝난다.
+# 정말 끝내주는 것이다. 이걸 xtabs로 해서, ftable로 정렬시킨 다음 숫자 타입으로 바뀌서 rowsum을 했었다. 차마 내가 그랫었다고는 이야기 못한다.
+
+library(sqldf)
+shopRFM <- sqldf("select id, max(clock) as finalPurchase, count(id) as Frequency, sum(purchase) as Monetary
+                 from shopAmount
+                 group by id")
+str(shopRFM) # 날짜 데이터는 숫자로 바꾸어져 있다.
+shopRFM$finalPurchase <- as.Date(shopRFM$finalPurchase, origin="1970-01-01")
+head(shopRFM)
+shopAmount[shopAmount$id == "C_10000",]
+today = "2014-03-02"
+shopRFM$Recency <- as.numeric(as.Date(today,"%Y-%m-%d") - shopRFM$finalPurchase)
+```
+2) 면세점 고객 세그멘테이션
+- RFM 단면을 각각 5단계로 구분하기위해 먼저 EDA시행
+```{r}
+hist(as.numeric(shopRFM$Recency)) # 분포가 엇비슷하다. 오해는 마시라. 이건 그냥 랜덤한 숫자에 기반한 것이다. 실데이터가 아니라는 점 잊지마시길.
+range(shopRFM$Monetary) # 5천원에서 4억까지 나온다. 
+Mdensity <- density(shopRFM$Monetary)
+
+head(shopRFM)
+summary(shopRFM)
+boxplot(shopRFM[,3], main ="Frequency") # extremely right skewed!
+boxplot(shopRFM[,4], main ="Monetary")  # extremely right skewed!
+boxplot(shopRFM[,5], main ="Recency")   # nearly normal!
+
+
+# 적절한 구간을 잘 정하는 것이 성패를 좌우하는 노하우일 것이다.
+# 그냥 임의로 상위 5%, 하위 10% 등으로 조합해 본다.
+(qFrequency <- quantile(shopRFM[,3], c(0.1, 0.5, 0.7, 0.95,1)))
+(qMonetary <- round(quantile(shopRFM[,4], c(0, 0.1, 0.5, 0.7, 0.95,1)),0))
+(qRecency <- round(quantile(shopRFM[,5], c(0, 0.1, 0.5, 0.7, 0.95,1)),0))
+
+shopRFM$F <- cut(shopRFM$Frequency, breaks = qFrequency, include.lowest=TRUE)
+shopRFM$M <- cut(shopRFM$Monetary, breaks = qMonetary)
+shopRFM$R <- cut(shopRFM$Recency, breaks = qRecency)
+str(shopRFM)
+head(shopRFM)
+# cut이후 level의 구분이 안되어서 팩터변수의 level을 조정하여 
+# 등급에 맞도록 한다.
+levels(shopRFM$F) <- c(1:4)
+levels(shopRFM$M) <- c(1:5)
+levels(shopRFM$R) <- c(1:5) 
+
+# Recency는 최근에 온 고객에게 더 높은 점수를 부여하기 위해 역순으로 값을 부여한다.
+
+# 잘왔는데, 또 여기서 문제다. 항상 타잎변환이 골치아프게 만든다.
+# 아직 팩터변수에 대해서 내가 잘 이해를 못하기 때문이다.
+shopRFM$RR <- as.numeric(as.character(shopRFM$R))
+shopRFM$MM <- as.numeric(as.character(shopRFM$M))
+shopRFM$FF <- as.numeric(as.character(shopRFM$F))
+
+# 확인해보니 결국 아까 레벨만 살짝 바꾸어 놓은게 문제다.
+# 5로 나눈 나머지에 1을 더하면 원하는 값이 된다.
+
+shopRFM$RR <- as.numeric(shopRFM$R) %% 5 + 1
+head(shopRFM)
+shopRFM$sumRFM <- shopRFM[,9]+shopRFM[,10]+shopRFM[,11]
+str(shopRFM)
+hist(shopRFM$sumRFM) # 대략 4개 고객군 정도로 나누면 될 것 같다.
+abline(v=5.5, col="red", lwd=2)
+abline(v=10, col="yellow", lwd=2)
+abline(v=12, col="blue", lwd=2)
+```
+
+15. 손익분기점 분석
+
+```{r 15_what_if_analysis}
+principal <- 10000
+interest <- c(0.01,0.02,0.03,0.04,0.05)
+period <- c(1,2,3,4,5)
+simulation <- matrix(rep(0,5*5),5,5)
+for (i in 1:length(period)) {
+  for (j in 1:length(interest)) {
+    simulation[i,j] <- round(principal * (1+interest[j])^period[i],0)
+  }
+}
+simulation
+```
+
+```{r 15_1_Break even point}
+revenue <- 4400
+materialCost <- 1000
+otherVariableCost <- 1350
+(variableCost <- materialCost + otherVariableCost)
+
+manMonth <- 100
+payMonth <- 10
+laborCost <- manMonth * payMonth
+otherFixedCost <- 900
+(fixedCost <- laborCost + otherFixedCost)
+profit <- 150
+
+(variableCostRate <- variableCost / revenue)
+(marginalProfitRate <-  1 - variableCostRate )
+(bepRevenue  <- fixedCost / marginalProfitRate)
+```
+
+```{r 15_2_bep simulation}
+costRaise <- c(0,5,10,15)
+productionVolume <- 4.4
+(materialCostNew <- costRaise*productionVolume + materialCost)
+(variableCostNew <- materialCostNew + otherVariableCost)
+(variableCostRateNew <- (variableCostNew) / revenue)
+
+(marginalProfitRateNew <- 1 - variableCostRateNew)
+layoffNumber <- 0:10
+fixedCostNew <- ((manMonth - layoffNumber) * payMonth) + otherFixedCost
+
+simulation <- matrix(rep(0,length(layoffNumber)*length(costRaise)),length(layoffNumber),length(costRaise))
+for (i in 1:length(layoffNumber)) {
+  for (j in 1:length(costRaise)) {
+    simulation[i,j] <- round(fixedCostNew[i] / marginalProfitRateNew[j],0)
+  }
+}
+simulation
+layoffExpected <- rep(0,length(costRaise))
+for (i in 1:length(costRaise)) {
+  (layoffExpected[i] <- min(which(simulation[,i] < 4000)) - 1)
+}
+layoffExpected  # 동일한 이윤수준을 유지하기위해 자재비 상승에 따른 layoff필요인력의 숫자다. 가상이기는 하지만 그래도 가슴아프다....
+```
+
+
+16. 선형계획법(Linear programming)
+
+```{r 16_lpsolve_linear programming}
+# R에도 선형계획 패키지가 있는지 처음 알았다.
+install.packages("lpSolve")
+install.packages("lpSolveAPI")
+library(lpSolve)
+library(lpSolveAPI)
+```
+
+```{r 16_1_lpsolve_add.constraint}
+?add.constraint 
+    # lprec : an lpSolve linear program model object
+    # type : type of constraints(1"<=",2">=",3"=")
+lps.model <- make.lp(0, 4) # 결과를 보고 판단할 때, 일단, 선형계호기법의 조건을 몇개로 할 것인지를 정해야하는 모양이다.
+set.objfn(lps.model, rep(1, 4)) # 선형계획 모델의 Minimize라고 들어간다. 디폴트값인가? 여기서 1의 의미는?
+add.constraint(lps.model, c(6,2,4,9), "<=", 50) # 제약조건을 정한다. 간단한 것도 있고, 어려운 방식으로 입력하는 것도 있는 모양이다.
+add.constraint(lps.model, c(3,1,5), 2, 75, indices = c(1,2,4))
+# indices를 1,2,4지정하니까 앞의 3,1,5가 1번과 2번, 그리고 4번 제약식으로 들어간다. 75앞에 있는 2는 제약식의 type을 말한다. 위에서 처럼 이해하기 쉽게 표현할 수도 있고, 숫자로 표현할 수 도 있는 모양이다.
+lps.model
+```
+
+```{r 16_2_lpSolve_implementation functions}
+?lp
+# Set up problem: maximize
+#   x1 + 9 x2 +   x3 subject to
+#   x1 + 2 x2 + 3 x3  <= 9
+# 3 x1 + 2 x2 + 2 x3 <= 15
+#
+f.obj <- c(1, 9, 1) #object 함수의 파라미터를 먼저 지정한다.
+# 제약조건식의 파라미터를 별로도 설정한다.
+f.con <- matrix (c(1, 2, 3, 3, 2, 2), nrow=2, byrow=TRUE)
+# 제약조건의 타입을 또 설정한다.
+f.dir <- c("<=", "<=")
+# 마지막으로 제약조건의 값을 정한다.
+f.rhs <- c(9, 15)
+#
+# Now run.
+# max는 최대화 조건, min은 최소화 조건이다.
+lp ("max", f.obj, f.con, f.dir, f.rhs)
+```
+
+```{r 16_3_lpsolve_sub function review}
+?lp.assign
+?lp.object
+?lp.transport
+# Transportation problem, Bronson, problem 9.1, p. 86
+#
+# Set up cost matrix
+#
+costs <- matrix (10000, 8, 5); costs[4,1] <- costs[-4,5] <- 0
+costs[1,2] <- costs[2,3] <- costs[3,4] <- 7; costs[1,3] <- costs[2,4] <- 7.7
+costs[5,1] <- costs[7,3] <- 8; costs[1,4] <- 8.4; costs[6,2] <- 9
+costs[8,4] <- 10; costs[4,2:4] <- c(.7, 1.4, 2.1)
+costs
+# Set up constraint signs and right-hand sides.
+#
+row.signs <- rep ("<", 8)
+row.rhs <- c(200, 300, 350, 200, 100, 50, 100, 150)
+col.signs <- rep (">", 5)
+col.rhs <- c(250, 100, 400, 500, 200)
+#
+# Run
+#
+lp.transport (costs, "min", row.signs, row.rhs, col.signs, col.rhs)
+
+lp.transport (costs, "min", row.signs, row.rhs, col.signs, col.rhs)$solution
+## 무슨 수송방법 최적화인 모양인데 잘 모르겠다. 선형계획법도 분야가 많고 다양해서 공부할려면 시간이 엄청나게 많이 소요되는 모양이다.
+일단, 이런게 있다는 것 정도를 아는 수준에서 마무리하고 나중에 필요할때 시간을 투입해서 정리하도록 한다.
+```
+
+```{r 16_4_lpSolve_sample}
+
+#먼저 lpSolveAPI패키지의 여러 함수 들을 이용하여 정확한 선형계획법 모델을 지정해주는 것이중요한 모양이다.
+test_lp <- make.lp(0, 4) #선형계획법 모델 생성
+test_lp
+set.objfn(test_lp, c(1, 3, 6.24, 0.1)) # 목적함수 설정
+add.constraint(test_lp, c(0, 78.26, 0, 2.9), ">=", 92.3)
+add.constraint(test_lp, c(0.24, 0, 11.31, 0), "<=", 14.8)
+add.constraint(test_lp, c(12.68, 0, 0.08, 0.9), ">=", 4)
+test_lp
+# 첫번째 열과 4번째 열에 하한을 설정한다.
+set.bounds(test_lp, lower = c(28.6, 18), columns = c(1, 4))
+# 첫번째 열과 4번째 열에 상한을 설정한다.
+set.bounds(test_lp, upper = 48.98, columns = 4)
+RowNames <- c("THISROW", "THATROW", "LASTROW")
+ColNames <- c("COLONE", "COLTWO", "COLTHREE", "COLFOUR")
+# 희한하게 정확히 자기자리를 찾아가서 이름들이 바뀐다.
+dimnames(test_lp) <- list(RowNames, ColNames)
+test_lp
+
+solve(test_lp)
+get.objective(test_lp)
+get.variables(test_lp)
+get.constraints(test_lp)
+```
+
+16-5) 선형계획법이란 복수의 제약조건을 만족하는 최적의 값을 구하는 방법인데, object와 condition이 모두 1차식이라는 특징이 있다.
+
+- 점포 상품진열에서 선반분할
+- 생산계획에서 매출 최대화
+
+```{r 16_5_shelf display}
+# pA, pB display. pAprice = 120, pBprice = 180.
+# 4 shelvs. pA = 8ea, pB=5ea each on one shelf.
+# pA, pB mixed display now allowed.
+
+# 변수가 2개인 리니어 모델 생성
+shelfDisplay <- make.lp(0, 2) 
+# 목적함수 설정
+set.objfn(shelfDisplay, c(8*120,5*180))
+lp.control(shelfDisplay, sense='max') # object function의 direction을 지정해 주는 함수다. 겨우 찾았다.
+?set.objfn
+?make.lp
+shelfDisplay # 결과출력이 자꾸 Minimize라고 나오는게 걸린다.
+# Maximize로는 어떻게 바꾸지????
+# lp.control함수로 Maximize로 변환이 가능해졌다.
+# lp.control에 대해서는 나중에 자세한 검토가 필요할 것 같다.
+# 뭐가 많이 들어있다.
+
+add.constraint(shelfDisplay, c(1,1), "=", 4) # "="는 3으로 표현가능하다. (1"<=",2">=",3"=")
+
+# 첫번째 열에 하한을 설정한다.
+set.bounds(shelfDisplay, lower = c(1), columns = c(1))
+# 두번째 열에 하한을 설정한다.
+set.bounds(shelfDisplay, lower = c(1), columns = c(2))
+shelfDisplay
+
+# 아주 쉬운문제이지만 절차를 그래도 따라가 본다.
+RowNames <- c("Shelf_Sum")
+ColNames <- c("product_A", "product_B")
+# 희한하게 정확히 자기자리를 찾아가서 이름들이 바뀐다.
+dimnames(shelfDisplay) <- list(RowNames, ColNames)
+shelfDisplay
+
+solve(shelfDisplay) # 그냥 0이 나오는데, 원래 그런 모양이다.
+get.objective(shelfDisplay) # 역시 예상대로 Max가 아니라 min값을 찾아냈다. 
+get.variables(shelfDisplay) # shelf A가 1개,shelf B가 3개시에 전체 매출이 최소화된다.
+get.constraints(shelfDisplay) # shelf 4개가 constraint이다.
+
+# 일단 flow는 잡았으니까, 세부적인 내용 파악, 특히 lp.control에 대한 이해가 필요하다.
+```
+
+16-6) 생산계획 수립
+
+- 원료 제약조건 하에서 생산계획의 선행계획 변수 및 파라미터를 뽑아내 모델을 구성할 줄 아는 것이 중요하디.
+```{r 16_6_production plan}
+
+produce <- make.lp(0,2)
+produce
+set.objfn(produce, c(3,4))
+lp.control(produce, sense="max")
+add.constraint(produce, c(1,3),1,18) #less than = 1
+add.constraint(produce, c(2,1),1,14) #greater than =2
+add.constraint(produce, c(1,1),1,8)  #equal = 3
+produce
+solve(produce)
+get.objective(produce) # 현재의 원료와 판매가격하에서 최대 가능한 매출 29만원
+get.variables(produce)
+```
+
+```{r 16_7_complicated lpSolve sample}
+library(lpSolveAPI)
+ 
+#used for result visualization
+library(ggplot2)
+library(reshape)
+library(gridExtra)
+ 
+#define the datasets
+  
+train<-data.frame(wagon=c('w1','w2','w3'), weightcapacity=c(10,8,12), spacecapacity=c(5000,4000,8000))
+train
+ 
+cargo<-data.frame(type=c('c1','c2','c3','c4'), available=c(18,10,5,20), volume=c(400,300,200,500),profit=c(2000,2500,5000,3500))
+cargo
+
+#create an LP model with 10 constraints and 12 decision variables
+ 
+lpmodel<-make.lp(2*NROW(train)+NROW(cargo),12)
+lpmodel 
+
+#I used this to keep count within the loops, I admit that this could be done a lot neater
+column<-0
+row<-0
+ 
+#build the model column per column
+for(wg in train$wagon){
+    row<-row+1
+    for(type in seq(1,NROW(cargo$type))){
+    column<-column+1
+     
+    #this takes the arguments 'column','values' & 'indices' (as in where these values should be placed in the column)
+    set.column(lpmodel,column,c(1, cargo[type,'volume'],1), indices=c(row,NROW(train)+row, NROW(train)*2+type))
+    }}
+ 
+#set rhs weight constraints
+set.constr.value(lpmodel, rhs=train$weightcapacity, constraints=seq(1,NROW(train)))
+ 
+#set rhs volume constraints
+set.constr.value(lpmodel, rhs=train$spacecapacity, constraints=seq(NROW(train)+1,NROW(train)*2))
+ 
+ 
+#set rhs volume constraints
+set.constr.value(lpmodel, rhs=cargo$available, constraints=seq(NROW(train)*2+1,NROW(train)*2+NROW(cargo)))
+ 
+#set objective coefficients
+set.objfn(lpmodel, rep(cargo$profit,NROW(train)))
+ 
+#set objective direction
+lp.control(lpmodel,sense='max')
+ 
+#I in order to be able to visually check the model, I find it useful to write the model to a text file
+write.lp(lpmodel,'model.lp',type='lp')
+# 읽을려면 model.lp파일을 텍스트에디터로 읽어들여야 한다.
+
+#solve the model, if this return 0 an optimal solution is found
+solve(lpmodel)
+ 
+#this return the proposed solution
+get.objective(lpmodel)
+```
+
+17. 주성분 분석
+- 원래의 속성을 조합하여 데이터 전체의 분포를 가장 명확하게 설명할 수 있는 속성을 새롭게 작성하는 방법
+
+- 새롭게 작성된 속성은 원 속성의 가중평균으로 표현되고, 가중평균의 가중치는 데이터분산이 최대가 되도록하는 시뮬레이션에 의해 구해진다.
+
+- 인구밀도, 주민소득과 같은 통계데이터로부터 지역경제 특성을 계산
+- 제품 마케팅에서의 포지셔닝 분석
+- 앙케이트조사에서 응답자 분류
+
+- 데이터 전체의 특징에 대한 속성을 새롭게 작성한다. 이를 주성분이라고 칭하며, 원데이터의 속성의 가중평균으로 나타낸다.
+- 여기서 사용되는 가중치를 주성분 부하량이라고 한다.
+```{r 17_1_princomp}
+a <- c(61,79,81,56,63)
+b <- c(77,59,58,82,81)
+c <- c(82,62,63,85,73)
+d <- c(70,72,68,74,66)
+e <- c(62,82,78,66,61)
+testScore <- rbind(a,b,c,d,e)
+colnames(testScore) <- c("korean","math","science","society","english")
+testScore
+
+# principal component analysis
+# princomp함수를 사용한다.
+pcaTest <- princomp(testScore)
+pcaTest
+summary(pcaTest) # comp1이 제1주성분, comp2가 제2주성분 등이다.
+pcaTest$loadings # 주성분부하량 (해석을 어떻게 하는지가 중요한 것같다.)
+pcaTest$scores # 과목 각각에대한 제1주성분과 제2주성분값이 나와있다.
+plot(pcaTest)
+screeplot(pcaTest)
+biplot(pcaTest) #biplot을 그리는데 사용되는 수치는 무엇인가?
+
+predict(pcaTest) # score와 수치가 같다. 
+
+```
+
+2) 주성분분석 함수 : prcomp 사용법
+```{r 17_2_prcomp}
+pcaTest2 <- prcomp(testScore)
+pcaTest2
+summary(pcaTest2)
+predict(pcaTest2)
+```
+
+3) 앙케이트 분석
+```{r 17_3_survey report}
+answer <- paste0("c_", 1:20)
+variety <- c(2,4,3,2,3,4,3,5,4,4,3,5,2,2,3,2,3,3,2,3)
+taste <- c(3,3,2,2,3,4,3,3,4,3,2,4,3,3,2,4,3,3,2,3)
+quantity <- c(3,4,3,2,5,3,3,3,2,3,4,3,3,3,3,3,4,2,4,2)
+cost <- c(3,3,3,3,3,3,3,3,2,2,3,3,4,2,2,3,3,3,2,3)
+area <- c(3,3,3,3,3,3,4,4,4,2,4,2,3,5,3,3,3,3,3,3)
+mood <- c(3,4,4,4,2,3,5,3,3,3,2,3,2,3,3,3,3,3,3,3)
+sanity <- c(2,5,3,3,3,3,4,4,2,3,5,3,3,3,3,3,3,3,4,4)
+location <- c(2,3,2,4,4,2,2,3,3,3,2,3,5,3,3,2,2,3,5,3)
+kindness <- c(1,5,2,2,3,5,3,4,4,2,3,5,3,3,3,5,3,4,3,3)
+waiting <- c(4,4,3,3,2,3,3,3,2,3,2,3,3,3,2,3,5,3,4,2)
+survey <- data.frame(answer,variety,taste, quantity, cost, area, mood, sanity, location, kindness, waiting)
+str(survey)
+survey
+
+#주성분 분석(princomp)
+pcaSurvey <- princomp(survey[,-1])
+pcaSurvey
+summary(pcaSurvey)
+pcaSurvey$loadings
+pcaSurvey$scores
+biplot(pcaSurvey)
+
+#R함수의 결과와 책에서 설명하는 내용이 다른데, 아마도 계산하는 방식이 틀려서 그런 것으로 판단됨. 하지만 결론은 비슷함. 그런데 같지는 않음. 아마도 데이터를 예전 결정계수 것을 그대로 가져와서 일수도 있을 것 같음.
+
+#주성분 분석(princomp)
+pcaSurvey2 <- prcomp(survey[,-1])
+pcaSurvey2
+summary(pcaSurvey2)
+predict(pcaSurvey2)
+biplot(pcaSurvey2)
+```

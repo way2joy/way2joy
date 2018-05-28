@@ -1,0 +1,109 @@
+9월말경에 나오기로 했던 1차 필기 시험결과가 미리 발표되었다는 이야기를 듣고,
+
+
+
+확인을 이제서야 했다. (솔직히 긴가민가 했다. ㅋㅋㅋ)
+
+
+
+서술형 1문제 이외에는 모두  객관식이어서 그랬는지, 4cm차이로 통과했다.
+
+
+
+패턴인식 책을 소개해준 그 문께 감사를 드린다.
+
+
+
+최소한 2~3점은 그 책 덕분에 맞춘 것 같다.
+
+
+
+Feel 받은 김에, 약 한달 후로 예정된 3% 합격율의 실기시험에 대비해
+
+
+
+Interactive Visualization에 도전해 봤다.
+
+
+
+축적된 라이브러리의 도움으로 그다지 어렵지 않게 성공했다.
+
+
+
+작업을 하다가 느낀 점은 소프트웨어를 가지고 미국을 따라잡기는 어렵다는 것이다.
+
+
+
+라이브러리 내의 매개변수(parameters)와  인자(arguments)들의 세부적인 조정은
+
+
+
+노하우가 축적되고 라이브러리 소스의 몇행 몇열에 뭐가 있는지를 아는 사람과
+
+
+
+모르는 사람의 차이가 클 것이기 때문이다.
+
+
+
+한국 소프트웨어 산업이 망해간다고 하는 것은 이런 상황하에서
+
+
+
+뒤쫒아가서 역전시키려 하기 때문이라는 생각이 문득 들었다.
+
+
+
+이럴 땐, 판을 깨야 한다.
+
+
+
+Warp를 시도하여 성공한다면 야단을 자배기로 받아가면서 헐떡거리며 쫒아가지 않고도
+
+
+
+확실하게 앞설 수 있는 건 아닌가? 하는 생각을 해봤다.
+
+
+
+library(googleVis)
+
+library(sqldf)
+
+cardJrVis <- sqldf("select bizName, salesDate, avg(revenueIdx) as avgRevnue
+
+                   from cardJr
+
+                   group by bizname, salesDate")
+
+tail(cardJrVis)
+
+cardJrVis$salesDate <- as.Date(strptime(cardJrVis$salesDate,"%Y%m%d"))
+
+testGvis <- gvisMotionChart(cardJrVis,idvar="bizName", timevar="salesDate")
+
+plot(testGvis)
+
+cat(testGvis$html$chart, file="testGoogleVis.html")
+
+
+
+library(googleVis)
+
+library(sqldf)
+
+cardJrVis <- sqldf("select bizName, salesDate, avg(revenueIdx) as avgRevnue
+
+                   from cardJr
+
+                   group by bizname, salesDate")
+
+tail(cardJrVis)
+
+cardJrVis$salesDate <- as.Date(strptime(cardJrVis$salesDate,"%Y%m%d"))
+
+testGvis <- gvisMotionChart(cardJrVis,idvar="bizName", timevar="salesDate")
+
+plot(testGvis)
+
+cat(testGvis$html$chart, file="testGoogleVis.html")

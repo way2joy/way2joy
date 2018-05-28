@@ -1,0 +1,27 @@
+facebook에 "Learniong R in Coursera 그룹이 있어서 들어가보았더니, 좋은 내용이 많은데,
+지난주 저희가 공부했던 Singular Value Decomposition관련 좋은 자료링크를 해주셨네요.
+손으로 풀면서 로직을 이해할 수 있는 예제가 있어서 좋은 것 같습니다.
+
+
+SVD(Singular Vale Decomposition)는 상호 호환적인 3개의 관점을 가지고 있다.
+
+1. Correlated된 데이터set(variables)을 일단의 uncorrelated 데이터set으로 바꿈으로써 
+    원데이터의 다양한 관련성을 보다 잘 드러나게 해주는 방법이다.
+
+     a method for transforming correlated variables into a set of uncorrelated ones 
+     that better expose the various relationships among the original data items.
+
+2. 데이터 포인트들이 가장 많은 variation(분산?)을 보여주는 dimension(변수?)을 식별하고, 
+    그 순서에 따라 순위를 정하는 방법이다.
+
+     a method for identifying and ordering the dimensions
+     along which data points exhibit the most variation.
+
+3. 일단, 가장 많은 분산을 가지고 있는 변수들의 순위를 파악했다면, 더 적은 차원(변수의 숫자?)을 사용하여
+    원래의 데이터포인트를 가장 잘 설명하는 새로운 변수(best approximation) 들을 만들어 내는 것이 가능하다.
+
+     once we have identified where the most variation is, it’s possible to find
+     the best approximation of the original data points using fewer dimensions. Hence, SVD can
+     be seen as a method for data reduction.
+
+SVD tutorial 링크 : http://www.ling.ohio-state.edu/~kbaker/pubs/Singular_Value_Decomposition_Tutorial.pdf

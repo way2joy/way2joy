@@ -1,0 +1,162 @@
+I heared some tips for solving homeworks from the ML Community TA
+
+
+
+If you haven’t done so already, it is really time to vectorize your code. Check sigmoid.m to see what a vectorized code looks like, especially if you have done this code in for loop in the previous exercise.
+
+One vs All – you may find some useful techniques if you watch Octave Tutorial
+
+Neural Networks – If you have vectorized implementations of previous one vs. all, then you realize that you have all the building blocks to do this part. Nice payoff for people who put time into learning vectorization up to this point. If not, it’s time to get a paper and pencil, and work out the details in steps, keeping track at each step of what dimensions the current matrices or vectors you are working with have.
+
+If you really can’t figure this out, don’t give up yet. You can actually skip whole Neural Network business and still have no problem completing the rest of the course assignment.
+
+then I asked,
+
+
+
+Hi! I’m very happy to attend this course.
+
+
+
+Using for loop in oneVsAll.m, I finished the Ex3 grading. 
+
+without previous programming experiences, I managed to meet the due dates.
+
+
+
+but, this time, I met a critical bottle neck here.
+
+I have been trying to vectorize my oneVsAll.M. 
+
+
+
+However, unlike vectorizing lrCostFunction.m,  this isn’t that easy to me.
+
+the bottle neck seems to be how to handle (y == c)  in fmincg’s predicates.
+
+
+
+I have read the help of fmincg, and searched  related threads in this forum.
+
+but still I couldn’t figure this out. 
+
+
+
+Every time I tried, dimension errors were occurring.
+
+furthermore the place where errors occurred was also vary every time.
+
+I have spent several hours. please give me just two more hint.
+
+
+
+1. is it possible REALLY, vectorize fmincg? 
+
+    According to above Mr. Takeuchi’s hints and to my understanding, this seems to be  possible, though.
+
+
+
+2.  then, what is the dimensions of y and c supplied to fmincg in this programming exercises setting?
+
+     Must it be one colume or one row vector, or could be multidimensional?
+
+
+
+and my colleagues answered to me. I believe this is the heart of MOOC experience.
+
+
+
+1.
+
+
+
+The comments on vectorizing apply to the first part where you calculate the cost function and the gradient.
+
+The function fmincg can be used exactly as provided. X is a matrix, y a column vector. Think about what y==c does. Is it another column vector? 
+
+You will notice that c is the loop variable. In each loop iteration, you are solving fmincg for one of the labels, this gives you the subset of all_theta that is responsible to predict this label.  Each iteration in the loop will give you one of the rows for all_theta, so you need to fill it in. Once the loop is done, all the values in all_theta are assigned.
+
+I had trouble with dimensions too. You can put a statement like size(theta) after the function call to see what is returned.
+
+
+
+2.
+
+
+
+I think he explained it very well, you can easily check the dimension of y your self by using size(y) it results m n. However since y is your output its mostly wise to leave it like it is. 
+
+(if i have problems with vector multiplications i just draw them as lines or rectangles (not with numbers but like _ * | works but |*_ doesnt) and see if what i expect is also what I do put in the function, hope this makes some sense, if you want i can draw it out for you).
+
+As Dieter  states the given function can be copied, however check it for better understanding. Use it as it is given and see what the output [theta] is and relate it to what you would expect all_theta to be.
+
+(all_theta is related to num_labels and the nr of elements in X + 1)
+
+
+
+3. From China colleagues
+
+
+
+After attempting vector-ize for fmincg function call, I realized this fmincg is only designed for locating minimum for each θ individually, as indicated in the description in fmincg.m “the function named in the string “f”, must return a function value and a vector of partial derivatives”. So I think the for-loop of 10 iterations is the only way to calculate and compose the final all_theta matrix. If fmincg() were designed to handle full vectorized call, then this (y == c) term should be replaced by a m×num_labels or in our case 5000×10matrix with i-th row of 10 elements that would have one 1 at the index of the digit y(i) and 9 zeros for the other 9 indices.
+
+
+
+4.
+
+
+
+I only got the vectorization to work by taking one of the unit tests and typing in the matrix  and vector data on the Octave console. 
+
+Then I evaluated each subexpression by typing it in and eventually building up to the entire vectorized expression. 
+
+
+
+Also I just wasted a lot of time on sizing issues for the predict function. 
+
+In this example, there are 401 features in the data after the 1s are added, so that is fixed at 401. 
+
+Theta1 is 25 x 401 indicating it uses 401 inputs generates 25 outputs. 
+
+Theta2 is 10 x 26 indicating it takes 26 inputs and generates 10 outputs. 
+
+So, the outputs from the first layer have to be shifted down one and a 1 stuffed into the first position. so the output of layer 1 can be used as the input for layer 3. 
+
+
+
+5.
+
+
+
+I just finished the predict.m for NN, in addition to the hints someone shared, for each layer’s calculation, don’t forget to apply the sigmoid function.  
+
+
+
+I followed my notes from the class and vectorized properly; however, I forgot to apply the sigmoid function.  Without the sigmoid function, I got close to 50% accuracy and the sampling of the prediction results at the end seemed OK (ie it got majority of the predictions correct).  I scratched my head for a long time and went to extra length to check and verify my vectorized implementation (to this end, I strongly agree with Toshiaki, once you figure out vectorization in previous exercises, it becomes exponentially easier as they build on the same concepts/building-blocks) and couldn’t figure out what I did wrong.  Finally when I reviewed my notes from the 1st NN video lecture, I finally recalled h(x) = sigmoid (logistic) activation function.  Once I applied the sigmoid function to each layer’s calculation, the accuracy shot up to 97.5%.
+
+
+
+6.
+
+
+
+Having a bit of difficulty getting my head around OneVsAll. Can somebody tell me, aside from the iterations to descend the gradient, is it possible to completely vectorize the code? In other words, is there a vectorized approach to updating all theta vectors simultaneously/without looping. Just looking for a yes or no because if the answer is yes I’d like to sort it out myself.
+
+
+
+7.
+
+
+
+Short answer: maybe possible, but not required for this exercise.
+
+
+
+Long answer:
+
+It should be possible, but you’d have to prepare a matrix of y == c for all cases, and perhaps have a wrapper around fmincg in order to accept that (the provided fmincg expects a vector of results, not a matrix of n result sets).
+
+
+
+
+Also, you must consider that such a vectorization would imply a parallel call to n fmincg instances (n being the number of classes). In our case, n is not that big, so a computer with good specs could probably handle it. But depending on the number of classes, that could become a bottleneck, running n gradient descents in parallel.

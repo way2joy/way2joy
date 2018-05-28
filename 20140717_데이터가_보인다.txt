@@ -1,0 +1,491 @@
+제이콥님, 가점 감사드립니다. 횡재를 한 기분까지 드네요. ^^;;
+
+어제 올린 포스트에 조화 평균(Harmonic mean)이라는 내용이 있었습니다.
+사실 데이터가 보인다를 무리하면서까지 R로 Translation할려고 했던 이유도 사실은 이 조화평균때문이었습니다.
+
+이 카페에 오시는 분들은 대부분 아시리라 생각합니다만, classification 모델의 품질을 측정하기위한
+지표로 Precision과 Recall이라는 것이 있습니다. 
+
+Coursera의 공동창업자인 Andrew Ng(잉이라고 발음합니다.)의 Machine Learning 강의를 들을 때, 배운 적이 있어서 
+대략 어떤때 쓰이는 말인지는 알고 있었습니다만, 이들 개념을 꼭 붙잡아 두기가 쉽지 않았습니다. 그게 그거 같아서
+헷갈리기 때문이지요. 그냥 외워봐야 외우는 순간 고생뿐이지 결정적인 순간에는 기억이 나지 않기 쉽습니다.
+
+Recall은 재현율이라는 용어로 정착이 된 것 같습니다. 관광빅데이터 분석대회의 금상팀의 발표자가 재현율, 재현율이야기를
+했던 기억이 나서 이건 확실히 외웠습니다만, 그래도 여전히 헷갈립니다.
+
+그래서 좀더 확실히 하고자 googling하다가 이 페이지를 읽는데 링크된 위키피디아를 봤더니, F-score를 설명하면서
+심플하게 harmonic mean이라고 설명을 하더군요.
+
+이렇게 종합 정리하면 될 것 같았습니다.
+
+- presision : 맞다고 예측한 것이 실제로 맞는 비율 (추정결과가 true인데 실제로 true인 것들의 비율)
+  -> 검증용 실제 데이터를 열로 배치했을 때, horizontal
+
+- recall(재현율) : 맞는 것을 맞다고 예측한 비율 (내가 찾고자 하는 것을 정확하게 찾아주는 비율로 해석할 수 있음.)
+  -> Sensitivity라고도 불림. 검증용 실제 데이터를 열로 배치했을 때, vertical
+
+- specificity : 틀린 것을 틀리다고 예측한 비율 (실제가 false인데 false로 예측된 것들의 비율)
+
+- accuracy : 내가 원하는 것이든 아니든 틀린 것은 틀리다고, 맞는 것은 맞다고 정확하게 분류해 주는 것. 
+  -> 검증용 실제 데이터를 열로 배치했을 때, diagonal
+
+- F1-measure/score : precision과 recall의 조화 평균
+
+- 보통 Sensitivity와 Specificity를 계산하거나, Precision과 Recall을 쌍으로 계산하며, 두가지의 지표는 반비례 관계이다.
+
+- Sensitivity와 Specificity를 계산하는 경우는 true set과 false set의 양이 비슷하며 TN을 정확히 알아낼 수 있는 경우에 
+  사용하는 반면 (supervised leaning 가능환경),
+   -> sensitivity와 (1-specificity)를 가지고 그린 그래프가 ROC 커브임.(Receiver Operating Characteristic) 그리고
+       이 ROC커브를 적분한 값을 그래프로 그리면 AUC(Area under the curve) 커브가 된다.
+ 
+- Precision / Recall을 사용하는 경우에는 false set 이 모호한 경우에 사용한다.(unsupervised learning 환경?)
+
+위에서 언급된 ROC커브는 1차 ADsP 시험에 주관식으로 나온 문제이기도 합니다. 이해도 못한 상태에서
+그냥 찍다시피 맞추긴 했습니다만, 조화 평균(Harmonic mean)의 개념을 이해하니, 
+Precision/Recall부터 ROC/AUC 커브까지 그냥 연결이 되더군요. 신기하지 그지 없었습니다.
+
+Machine Learning 수업 당시 Andrew Ng 선생님은 Precision과 Recall의 단점을 설명해 주시면서,
+F-score = 2*((Precision*Recall)/(Precision+Recall))이라고 공식을 긴 설명과 함께 제시해 주셨는데,
+당연히 전혀 기억이 안났지요. 
+
+그런데 사실은 이것이 2/((1/Precision)+(1/Recall))과 같은 값입니다. 즉, 딱 조화평균인 것이지요.
+선생님께서는 당연히 알고 계셨겠지만, F-score하나 가르치기도 힘든데, Harmonic mean까지 언급하면
+학생들 바로 떨어져 나간다는 것을 아셨기 때문이었으리라고 지금은 생각이 듭니다.
+
+그렇지만, 아무래도 R공부를 자격증을 따기위해서만 하는 것은 아니라는 생각에, 기초부터 다시 다지자는 의미에서
+자판을 투닥거리다가, 재미까지 있어서 내친김에 끝까지 가게 된 것입니다.
+
+아래에서 소개된 Z차트는 저도 처음보는 유형인데, 제조업체 등에 근무하시면, 아주 유용할 거라는
+생각이듭니다.
+
+사설이 길었네요. 즐거운 하루 되시기 바랍니다.
+
+
+데이터가 보인다 - Rmd Translation (2)
+========================================================
+
+7.산포도(scatter plot)와 버블차트(bubble chart)
+
+1) 버블차트
+```{r 7_1_bubble chart}
+# 데이터준비
+month <- 1:12
+temp <- c(4,3,5,10,16,21,27,28,26,19,11,7)
+salesVita <- c(42,43,40,47,49,55,59,58,56,52,44,41)
+salesSweet <- c(56,54,57,50,48,43,42,41,44,47,51,55)
+salesSTD <- c(58,50,42,44,48,54,56,50,46,44,54,52)
+salesTemp <- data.frame(month, temp, salesVita, salesSweet, salesSTD)
+
+# 산포도 작성
+require(ggplot2)
+ggplot(salesTemp, aes(temp, salesVita, size=salesVita, label=salesVita), guide=FALSE) + geom_point(colour="red") + geom_text(size=5, hjust=0, vjust=2) + theme_bw()
+```
+
+2) 판매량과 재고량
+```{r 7_2_sales volume and inventory}
+# 작업 준비
+rm(list=ls())
+require(ggplot2)
+
+# 데이터 준비
+item <- Paste0("item",1:7)
+# 매출액(연간누적)
+revenue <- c(4000, 25000, 15000, 15000, 30000, 21000, 80000)
+
+# 재고량을 금액으로 환산액 재고금액
+inventory <- c(1000,2000,3000,2500,5000,7000,5000)
+salesInventory <- data.frame(item,revenue, inventory)
+
+# 재고월수 : 현재 재고로 몇달을 버틸 수 있는지를 나타냄
+salesInventory$timeInventory <- with(salesInventory,inventory/revenue*12)
+
+salesInventory
+
+# 산포도
+ggplot(salesInventory, aes(revenue, inventory, label=item)) + geom_point() + geom_text(hjust=1, vjust=1) + theme_bw()
+
+# 버블 차트
+ggplot(salesInventory, aes(revenue, inventory, size=timeInventory, label=item)) + geom_point(color="red") + geom_text(hjust=1, vjust=1, size=4) + theme_bw() +labs(title="매출액과 재고량의 산포도")
+
+# 상품6과 상품7이 다른 상품들과는 다른 경향을 보임.
+# 상품6은 판매가 안되어 재고가 많고 (악성재고가 될 가능성 높음),
+# 상품7은 판매는 잘되는데 재고가 없어 시급히 보충해야한다.
+# 즉, 품절의 위험이 있다.
+```
+
+__8. 상관계수 (Corelation coefficient)__
+
+- 상관관계의 경향과 강도를 나타냄 -> [-1,1]
+- 외국 환율투자에서 두 통화간 상관관계 지표 등에서 사용됨.
+- 전자상거래 사이트의 추천분석
+- 의료분야에서의 발병요인 분석
+
+1) 상관관계 계산 연습
+```{r 8_1_correlation coefficient}
+# 데이터준비
+month <- 1:12
+temp <- c(4,3,5,10,16,21,27,28,26,19,11,7)
+salesVita <- c(42,43,40,47,49,55,59,58,56,52,44,41)
+salesSweet <- c(56,54,57,50,48,43,42,41,44,47,51,55)
+salesSTD <- c(58,50,42,44,48,54,56,50,46,44,54,52)
+salesTemp <- data.frame(month, temp, salesVita, salesSweet, salesSTD)
+
+# 각 변수별 평균 벡터 생성
+itemMean <- apply(salesTemp[,2:5],2,mean)
+itemMean
+
+# 벡터연산으로 한번에 계산하기 위해 repmat 생성
+repmat <- function(a,n,m) {kronecker(matrix(1,n,m),a)}
+as.vector(itemMean)
+itemMeanMat <- repmat(t(as.vector(itemMean)),nrow(salesTemp),1)
+itemMeanMat
+
+# 평균과의 차이
+diffMean <- salesTemp[,2:5] - itemMeanMat
+diffMean
+
+# 온도와의 상관관계를 구하기위한 차의 곱계산을 위한 기준데이터의
+# 복제 매트릭스 생성
+tempMat <- repmat(as.vector(diffMean$temp),1,4)
+tempMat
+
+# 차의 곱
+diffProduct <- diffMean * tempMat
+diffProduct
+
+# 차의 제곱
+diffMeanP2 <- diffMean^2
+diffMeanP2
+tempMatP2 <- tempMat^2
+tempMatP2
+
+# 상관계수 계산
+
+corrCoef <- colSums(diffProduct)/sqrt(colSums(diffMeanP2)*colSums(tempMatP2))
+
+# 자기 자신과의 상관계수는 1
+corrCoef
+
+# 비타 상품이 온도와 양의 상관관계이고, 스위트는 온도가 올라가면
+# 잘 안팔린다. 스탠다드는 스탠다드답게 온도와 상관이 없다.
+# 아마도 스위트는 따뜻한 음료이고, 비타는 차가운 음료인 것 같다.
+
+
+# 함수에 따른 계산방법의 차이 비교
+colSums(diffMeanP2)*colSums(tempMatP2)
+sum(diffMeanP2)*sum(tempMatP2) 
+# R에서 sum은 greedy하게 매트릭스내의 모든 숫자를 더한다.
+# matlab에서 sum은 열의 sum인 것으로 기억한다.
+
+# 여러가지 도구를 다루려면 각각의 특성을 잘 이해해야한다.
+# 그래서 배울때 잊어먹지 않게 잘 비교 정리를 해두어야 한다.
+```
+
+2) 단순한 협업필터링 (collaborative filtering)
+
+- 추천 : 개인에게 개인화된 상품을 제안하는 것임.
+- 고객A와 고객B의 상관관계를 비교해서, 서로 높은 상관관계가
+  있는 경우는 고객B가 구입완료한 상품중에 고객A가 미구입한
+  상품을 고객 A에게 제안한다.
+- 실제로는 cosine유사도 등 여러가지 복잡한 알고리듬이 적용되나
+  여기서는 이해를 돕는 차원에서 쉬운 방식으로 진행한다.
+  
+```{r 8_2_collaborative filtering}
+# 데이터 준비
+cID <- Paste0("C",1:25)
+P1 <- sample(0:1,25,TRUE)
+P2 <- sample(0:1,25,TRUE)
+P3 <- sample(0:1,25,TRUE)
+P4 <- sample(0:1,25,TRUE)
+P5 <- sample(0:1,25,TRUE)
+P6 <- sample(0:1,25,TRUE)
+P7 <- sample(0:1,25,TRUE)
+P8 <- sample(0:1,25,TRUE)
+P9 <- sample(0:1,25,TRUE)
+P10 <- sample(0:1,25,TRUE)
+purHistory <- data.frame(cID,P1,P2,P3,P4,P5,P6,P7,P8,P9,P10)
+purHistory
+str(purHistory)
+
+# 고객과 고객간의 상관계수를 구함.
+# 평균계산부터 시작
+meancID <- apply(purHistory[,2:11],1,mean)
+meancID
+
+# 차이계산의 위한 평균 매트릭스 생성
+meancIDMat <- repmat(meancID,1,10)
+meancIDMat
+dim(meancIDMat)
+# 평균과의 차이 분석 (구매이력에서 첫번째 열은 제외하고 계산해야함)
+diffMean <- purHistory[,-1] - meancIDMat
+diffMean
+
+# 차의 곱 계산을 위한 기준고객C1 구매이력 복제 매트릭스 생성
+as.vector(diffMean[1,]) 
+# 컬럼벡터의 경우에는 repmat함수에서 수용이 가능하나
+# 행벡터의 경우에는 벡터로 만들면 열벡터가 되기 때문에
+# 다시 transpose함수를 적용해주어야 한다.
+
+diffC1 <- repmat(t(as.numeric(diffMean[1,])),nrow(purHistory),1)
+diffC1
+
+# 차의 곱
+diffProduct <- diffMean * diffC1
+rowSums(diffProduct)
+
+# 차의 제곱합계를 곱한뒤에 제곱근 계산
+rowSums(diffMean)^2
+rowSums(diffC1)^2
+corrCoef <- rowSums(diffProduct)/sqrt(rowSums(diffMean^2)*rowSums(diffC1^2))
+
+which.max(corrCoef[-1])
+
+# 그런데 유사한 상관관계인 고객이 3명이다
+sameCorr <- corrCoef[-1] == corrCoef[-1][7]
+corrCoef[-1][sameCorr] # 이걸로는 몇번째 고객인지 안나온다.
+dummy <- 1:length(sameCorr)
+
+highCorr <- (dummy*sameCorr)[sameCorr]
+highCorr + 1  # C1고객을 제외한 나머지에서 구한 것이므로 원래의
+              # 벡터에서의 위치는 1을 더해야 한다.
+
+# C1고객과 상관관계가 가장 높게 나온 고객은 C8, C10, C14번 고객
+# 이다. 이들을 추출해 상품을 비교해 본다.
+
+purHistory[c(1, highCorr+1),]
+
+# 유사고객중 2명이 샀는데 C1고객이 안산 것이 P10상품이다.
+# 따라서 P10 상품을 추천한다.
+```
+
+__9. 회귀분석__
+
+1) 회귀식 생성
+```{r 9_1_Regression analysis}
+# 데이터 준비
+month <- 1:12
+temp <- c(4,3,5,10,16,21,27,28,26,19,11,7)
+salesVita <- c(42,43,40,47,49,55,59,58,56,52,44,41)
+salesSweet <- c(56,54,57,50,48,43,42,41,44,47,51,55)
+salesSTD <- c(58,50,42,44,48,54,56,50,46,44,54,52)
+salesData <- data.frame(month, temp, salesVita, salesSweet, salesSTD)
+salesData
+
+# 먼저, 회귀분석함수가 아닌 로직이해 차원에서 공식을 가지고 직접 계산해 본다.
+# 기본 회귀식 : y(판매량) = a*x(온도) + b
+# a = sum((temp-mean(temp))*(salesVita-mean(salesVita)))/sum((temp-mean(temp))^2)
+# b = mean(salesVita) - a*mean(temp)
+
+# 회귀식 기울기 산출
+meanData = apply(salesData[,2:5],2,mean)
+meanData
+meanMat <- repmat(t(as.numeric(meanData)),nrow(salesData),1)
+diffMean <- salesData[,2:5] - meanMat
+diffMean
+tempMat <- repmat(diffMean$temp,1,4)
+tempMat
+colSums(tempMat^2)
+diffProd <- colSums(diffMean * tempMat)
+a <- diffProd/colSums(tempMat^2)
+a
+b <- meanData - a * rep(meanData[1],4)
+regCoef <- rbind(a,b)
+regCoef
+# 판매량의단위가 1000개일 때, 온도가 1도 상승하면
+# vita의 판매량은 726개증가, Sweet는 590개 감소할 경으로
+# 예상할 수 있다.
+
+# lm 모델로 검산한 결과 값이 동일하게 나옴.
+lm(salesVita~temp, data=salesData)
+lm(salesSweet~temp, data=salesData)
+lm(salesSTD~temp, data=salesData)
+```
+
+__2) 가격 탄력성__
+- 가격이 변동함에 따라 판매량이 변화하는 정도를 나타내는 수치
+- 가격 탄력성이 1보다 클 경우, 가격을 내리면 매출액이 늘어나고,
+- 가격 탄력성이 1보다 작을 경우, 가격을 올리면 매출액이 늘어난다.
+
+```{r 9_2_price elasticity}
+# 데이터 준비
+price <- 100:110
+STD <- c(69,67,68,66,67,65,64,63,64,64,63)
+Sweet <- c(65,66,65,66,65,65,64,64,65,63,64)
+Vita <- c(64,65,64,64,65,63,63,63,62,61,62)
+priceSales <- data.frame(price,STD,Sweet,Vita)
+priceSales
+
+# 이러한 상황에서 시장점유율 확대를 위해 가격을 인하하는 것이
+# 바람직할까?에 대한 전략적 의사결정이 필요하다.
+# 일단, 데이터를 그냥 보아서는 뭐가 차이가 나는지 안보인다.
+# sales = a*price + b
+
+meanData = apply(priceSales,2,mean)
+meanData
+meanMat <- repmat(t(as.numeric(meanData)),nrow(priceSales),1)
+diffMean <- priceSales - meanMat
+xMat <- repmat(diffMean[,1],1,ncol(diffMean))
+diffProd <- colSums(diffMean*xMat)
+a <- diffProd/colSums(xMat^2)
+b <- meanData - a*rep(meanData[1],length(meanData))
+regCoef <- rbind(a,b)
+regCoef
+
+# STD의 기울기가 가장 크므로 가격 탄력성이 제일 높다.
+# 매출액을 시뮬레이션 해본다.
+priceSales$diffPrice <- rep(110,11) - priceSales$price
+priceSales$STDSim <- priceSales$price*rep(regCoef[1,2],11) + rep(regCoef[2,2],11)
+priceSales$salesVol <- priceSales$STDSim*priceSales$price
+priceSales
+require(ggplot2)
+ggplot(priceSales, aes(diffPrice, salesVol)) + geom_bar(stat="identity") + ylim(c(6000,6930))
+
+ggplot(priceSales, aes(diffPrice, salesVol, STDSim)) + geom_bar(salesVol)
+```
+
+__10.결정계수__(Determination coefficient)
+
+- 데이터의 특정값이 또 다른 값에 영향을 미치는 정도를 측정하는 지표
+- 앙케이트 조사항목에 대한 영향도 판정
+- 회귀분석 모델의 신뢰도 판정 등에 사용됨(R^2)
+
+1) 음식점 방문고객의 앙케이트 조사 결과
+
+- 매우좋음(5) - 매우나쁨(1)
+- 반드시 이용(5) - 절대 이용안함(1)
+```{r 10_1_survey result review}
+# 데이터 준비
+answer <- Paste0("c_", 1:20)
+variety <- c(2,4,3,2,3,4,3,5,4,4,3,5,2,2,3,2,3,3,2,3)
+taste <- c(3,3,2,2,3,4,3,3,4,3,2,4,3,3,2,4,3,3,2,3)
+quantity <- c(3,4,3,2,5,3,3,3,2,3,4,3,3,3,3,3,4,2,4,2)
+cost <- c(3,3,3,3,3,3,3,3,2,2,3,3,4,2,2,3,3,3,2,3)
+area <- c(3,3,3,3,3,3,4,4,4,2,4,2,3,5,3,3,3,3,3,3)
+mood <- c(3,4,4,4,2,3,5,3,3,3,2,3,2,3,3,3,3,3,3,3)
+sanity <- c(2,5,3,3,3,3,4,4,2,3,5,3,3,3,3,3,3,3,4,4)
+location <- c(2,3,2,4,4,2,2,3,3,3,2,3,5,3,3,2,2,3,5,3)
+kindness <- c(1,5,2,2,3,5,3,4,4,2,3,5,3,3,3,5,3,4,3,3)
+waiting <- c(4,4,3,3,2,3,3,3,2,3,2,3,3,3,2,3,5,3,4,2)
+revisit <- c(1,4,3,2,3,4,3,4,4,4,2,4,2,3,3,3,3,3,2,3)
+survey <- data.frame(answer,variety,taste, quantity, cost, area, mood, sanity, location, kindness, waiting, revisit)
+str(survey)
+
+# 항목별 평균점수
+barplot(apply(survey[,-1],2, mean))
+barplot(apply(survey[,-1],2, sd))
+
+# 응답항목별 돗수분포표
+for (i in 2:length(names(survey))) {
+  hist(survey[,i], main=names(survey)[i])
+}
+
+# 점원이 친절하다고 한 사람들의 특성
+survey[survey$kindness == 5,]
+
+# 재방문율이 높은 고객의 특징은?
+# 결정계수는 상관계수의 제곱과 같은 수치임.
+# 평균과의 차이를 변수간에 곱한 값의 합을 
+# 평균과의 차이의 제곱의 합을 변수간에 서로 곱한 값으로 나눈다.
+
+# repmat 함수 생성
+repmat <- function(a,n,m) {kronecker(matrix(1,n,m),a)}
+
+meanData <- apply(survey[,-1],2,mean)
+meanMat <- repmat(t(meanData),nrow(survey),1)
+meanMat
+diffMean <- survey[,-1] - meanMat
+anchorMat <- repmat(diffMean[,11],1,11)
+anchorMat
+diffProd <- colSums(diffMean*anchorMat)
+deterCoef <- diffProd^2/(colSums(diffMean^2)*colSums(anchorMat^2))
+deterCoef
+
+# 재방문고객의 경우, 가격보다는 음식의 다양성, 친절한, 맛 등이
+# 미치는 영향이 큰 것을 변수별 재방문과의 결정계수를 비교해
+# 보면 알 수 있다.
+```
+
+11.Z차트
+- 월별 매출, 매출누계, 이동합계라는 3가지 데이터를 꺽은선 그래프로
+나타내면 모양이 Z자와 같이 나와서 Z차트라고 한다.(일본식 차트임)
+```{r 11_1_Z chart}
+# 데이터 준비
+dummy <- Paste0("2010_",4:12)
+dummy1 <- Paste0("2011_",1:12)
+dummy2 <- Paste0("2012_",1:3)
+month <- rep(c(),9+12+3)
+month[1:length(dummy)] <- dummy
+month[10:21] <- dummy1
+month[22:24] <- dummy2
+month
+Pa <- rep(1000,24)
+Pb <- c(1000,1010,1020,1030,1041,1051,1062,1072,1083,1094,1105,1116,1127,1138,1149,1161,1173,1184,1196,1208,1220,1232,1245,1257)
+Pa <- c(1000,990,980,970,961,951,941,932,923,914,904,895,886,878,869,860,851,843,835,826,818,810,802,794)
+salesTrend <- data.frame(month,Pa,Pb,Pa)
+salesTrend
+salesPa <- salesTrend[,1:2]
+salesPa$cumSum <- cumsum(salesPa$Pa)
+salesPa
+
+# 금월부터 과거 1년치의 숫자를 이동합산한다.
+# movSum은 계산이 R에서는 만만치 않은데,,,
+movSumTerm <- 12
+numbering <- 1:nrow(salesPa)
+mat <- cbind(start = head(numbering, -(movSumTerm-1)), end = tail(numbering, -(movSumTerm-1)))
+sumVec <- salesPa$Pa
+movSum <- apply(mat, 1, function(x) {sum(sumVec[x[1]:x[2]])})
+salesPa$moveSum[mat[,2]] <- movSum 
+salesPa
+
+# B상품용 Z차트 생성 데이터 추출
+salesPb <- salesTrend[,c(1,3)]
+salesPb$cumSum <- cumsum(salesPb$Pb)
+movSumTerm <- 12
+numbering <- 1:nrow(salesPb)
+mat <- cbind(start = head(numbering, -(movSumTerm-1)), end = tail(numbering, -(movSumTerm-1)))
+sumVec <- salesPb$Pb
+movSum <- apply(mat, 1, function(x) {sum(sumVec[x[1]:x[2]])})
+salesPb$moveSum[mat[,2]] <- movSum 
+salesPb
+
+# C상품용 Z차트 생성 데이터 추출
+salesPc <- salesTrend[,c(1,4)]
+salesPc$cumSum <- cumsum(salesPc$Pc)
+movSumTerm <- 12
+numbering <- 1:nrow(salesPc)
+mat <- cbind(start = head(numbering, -(movSumTerm-1)), end = tail(numbering, -(movSumTerm-1)))
+sumVec <- salesPc$Pc
+movSum <- apply(mat, 1, function(x) {sum(sumVec[x[1]:x[2]])})
+salesPc$moveSum[mat[,2]] <- movSum 
+salesPc
+```
+
+2) Z차트 그래핑
+```{r 11_2_Z chart graph}
+Par(mfrow=c(1,3))
+gdata <- salesPa[13:24,]
+gdata$cumSum <- cumsum(gdata$Pa)
+gdata
+#3rodml 수치를 합쳐야 해서 y축을 별도로 설정했다.
+plot(gdata$Pa, type="b", ylim=c(0,max(gdata[,2:3]*1.1)), ylab="") #데이터를 잘랐더니 이상하게 나온다.
+lines(gdata$cumSum, type="b", col="blue")
+lines(gdata$moveSum, type="b", col="red")
+
+str(gdata) # month가 factor변수일 경우, 파일을 분할해도 level은 살아있는 모양이다.
+
+gdata <- salesPb[13:24,]
+gdata$cumSum <- cumsum(gdata$Pb)
+gdata
+#3개의 그래프를 합쳐야 해서 y축을 별도로 설정했다.
+plot(gdata$Pb, type="b", ylim=c(0,max(gdata[,2:3]*1.1)), ylab="")
+lines(gdata$cumSum, type="b", col="blue")
+lines(gdata$moveSum, type="b", col="red")
+
+gdata <- salesPc[13:24,]
+gdata$cumSum <- cumsum(gdata$Pc)
+#3rodml 수치를 합쳐야 해서 y축을 별도로 설정했다.
+plot(gdata$Pc, type="b", ylim=c(0,max(gdata[,2:3]*1.1)), ylab="")
+lines(gdata$cumSum, type="b", col="blue")
+lines(gdata$moveSum, type="b", col="red")
+par(mfrow=c(1,1))
+```

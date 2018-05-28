@@ -1,0 +1,417 @@
+제가 어제 빅콘테스트 2차 설명회에 갔다 왔습니다.
+
+
+
+지난 번 1차 설명회에도 참석했었는데,
+
+
+
+어제는 이미 데이터를 보고 참석한 분들도 있어서 구체적인 질문도 있고해서 1차에 비해서는 재미(?)는 별로 없었습니다만, 좀 구체적인 맛은 더 있었습니다.
+
+
+
+1차 설명회 이후에 한가위 이후부터 신경쓰기로 마음먹고,
+
+데이터는 일단 받아 놓는게 여러모로 좋다는 것을 관광빅데이터 분석대회를 통해 느낀 바가 있었기 때문에 미리 등록해서 데이터는 받아놓았습니다.
+
+
+
+받아놓은 시합용 데이터를 sql로 정리도 해보고, (확실히 관광빅데이터 분석대회보다는 좋아진 거지요, ㅋㅋㅋ)
+
+
+
+제공된 데이터의 좌표계를 GPS기준으로 바꾸기 위해서 통계청의 서버에 접속해서
+
+좌표변환하는 초보적인 javascript 프로그램도 만드는 연습도 하고 해서 개인적으로는 관심이 많습니다.
+
+
+
+1차설명회에서는 작년에 최우수상을 수상한 덕수고등학교 학생 1명과 고대 박사과정 1분이 작년에는 어떻게 했는지 설명을 해주어서 그 이야기 듣는게 재미가 있었는데, 어제는 구체적으로 결과물을 내면 어떤 식으로 평가를 하는지 등, 주로 대학원생 분들이 질문을 많이 하시더군요.
+
+
+
+일단,  KT의 김이식 상무님이 아주 설명을 재미있게 해주시면서도 여러가지 “확정”은 안되었으나, 가능성이 높은 향후의 계획에 대해서 이야기 해주시는 것이 좋았습니다.
+
+
+
+대략 다음 3가지가 그 주요내용입니다. (거의 hooking 수준입니다. ㅎㅎㅎ)
+
+
+
+상금을 한 1억쯤 드릴려고 준비를 다 해놓았는데, 그러면 혈세를 낭비한다는 비난여론이 있을 것 같아, 시합을 통해 재능이 있는 분들이 발견 되면, 그분들과 함께 할 수 있는 프로젝트를 바로 연계시켜서, 한 1억원쯤 버시게 해드리겠다. (물론 팀 기준이라 개인이 아닌 경우는 1/n을 해야합니다…)
+
+
+
+국내에서 빅데이터 한다는 데가 KT, SKT, 신한카드, 다음, 네이버 정도인데, 인턴쉽 선발시에 다양한 메리트를 드린다.
+
+
+
+내년부터 정부에서 빅데이터 프로젝트가 많이 시행될 것 같은데, 서울시와 같이 수행한 심야버스 노선확정 사례 때문인지 자기한테 도와달라고 많이 문의를 한다. 나도 잘 모르지만, 그럴때 이번 시합에서 나온 결과를 인터넷에 오픈하고, 누가 자기에게 어떻게 하면 좋겠냐고 물어보면, 그 걸 보고 그중에서 찾아보시라고 하겠다.
+
+
+
+뭐, 구미가 동하지 않을 수 없는 이야기 들이긴 합니다만, 되면 좋은거지, 이걸 바라고 시합에 참여하기는 저같은 초보에게는 거의 기대하기 어렵겠지요. ㅋㅋㅋ
+
+
+
+한가지 인상적인 부분은 시합용으로 제공된 데이터가 거의 세계에서도 유례가 없는 수준의 고급 데이터라는 자부심을 김이식 상무님이 명확하게 드러낸 점이었습니다. 이런 데이터의 가치를 제대로 판단하지 못한다면 빅데이터에 관심이 있다고 보기 어렵다는 취지의 말씀도 하시더군요.
+
+
+
+그리고 주제도, 그냥 나들가게 매출이라고 해서 뭐 중요한 건가 했는데,
+
+주요 기업들이 그렇게 중요시하는 매장의 입지를 판단하는 방법과 정확히 동일한 메카니즘으로 움직이는 것이라서 이것을 풀 수있거나 푸는 인사이트를 가진다면,
+
+바로 프로젝트화 할 수 있다는 점을 강조하시더군요.
+
+
+
+가게의 매출이야 가게의 운영자가 얼마나 하는지에 따라 다르겠으나, 여러가지 정보를 가지고 대략 “알바”를써서 할 수 있는 매출을 일정정도 이상의 정확성을 가지고 예측하고 그것이 신뢰성이 있다면 그게 곧 입지를 정하는 기준이 될 수 있다고 하시더군요.
+
+
+
+제공된 데이터도 주변의 버스역과 지하철역의 승하차정보, 주변의 모바일 통화 건수, 주변에 있는 상점의 수 및 각각의 매출을 추정할 수 있는 카드사 정보 등, 현재 시점에서 위에서 제시한 과제를 해결하는데 연결시킬 수 있는 주요 정보는 거의 제공해 주고 있는 것 같습니다.
+
+
+
+하지만, 정작 바라시는 목적은 다른 데 있는 것 같았습니다. 어떤 인사이트를 찾으시는 것 같았습니다.
+
+
+
+우리가 해본 방법과 데이터는 제공해 드린 데이터와 같지만, 그것이 아닌 다른 데이터소스나, 분석 인사이트나 이런 문제를 접근하는 새로운 데이터적인 관점을 찾으시는 것 같더군요.
+
+
+
+분명한 것은 쉽지 않은 과제라는 것입니다.
+
+그리고, 평가 방법이 관광빅데이터 분석대회와 같이,
+
+과정이나 Visualization을 보는 것이 아니라,
+
+답의 정확도 만을 평가한다는 것이 전체적인 언급들이 예사롭지 않게 보이는 주요한 이유입니다.
+
+
+
+거의 20번은 넘게 들은 이야기가 “꿩잡는 것이 매”이기 때문에 답을 맞혀오면,
+
+이유불문하고 “매”로 인정하겠다는 것입니다.
+
+
+
+다만 캐글처럼 순위를 알 수 있거나 반복적으로 모델의 성능을 평가해서 개선할 수 있도록 하는 서비스는 하실 생각도 없고, 또 필요하다고 생각하지도 않는 것 같았습니다.
+
+
+
+“어차피 우리나라의 빅데이터의 현실이 그런 친절함, 지원 기대할 수 도 없이 “쪼기”만 하는데, 그냥 알아서 잡아와 보세요. 톡 까놓고 이야기하면 우리도 잘 몰라요.
+
+하지만 결과를 보고, 그 걸 만든 사람을
+
+보면 대략 감은 잡을 수 있는 정도는 됩니다.
+
+그 대신 동일한 여건하에서, 이걸 해낸 몇몇 분에게는 보장할 수는 없으나,
+
+기대 이상의 Benefit이 있을 것입니다”
+
+
+
+대략 이런 이야기로 요약이 되는 것 같습니다.
+
+
+
+아무튼 관심있으신 분들에게는 쉽게 구하기 어려운
+
+실전수준의 데이터를 다뤄 볼 좋은 기회인 것 같습니다.
+
+다만 전체적인 데이터의 양이 충분하지는 않습니다.
+
+
+
+혹시 좌표변환 등이 어려우시면 제가 만든 샘플 코드를 참조하여 주시면 좋을 것 같습니다.
+
+
+
+egoing님의 생활코딩 강의를 듣고, 그냥 인터넷 뒤져서 누덕누덕 기워 만든 거라,
+
+되었다 안되었다하는 수준의 아주 형편없습니다만,
+
+일단 될 때가 더 많습니다.
+
+나름대로 연구하셔서 발전시키시면 다시 저에게도 알려주시면 좋지 않을까 해서요.
+
+
+
+편안한 한가위 되시기 바랍니다.
+
+
+
+
+
+function handleFiles(files) {
+
+	// Check for the various File API support.
+
+	if (window.FileReader) {
+
+		// FileReader are supported.
+
+		getAsText(files[0]);
+
+	} else {
+
+		alert('FileReader are not supported in this browser.');
+
+	}
+
+}
+
+
+
+function getAsText(fileToRead) {
+
+	var reader = new FileReader();
+
+	// Handle errors load
+
+	reader.onload = jsonHandler;
+
+	reader.onerror = errorHandler;
+
+	// Read file into memory as UTF-8      
+
+	reader.readAsText(fileToRead);
+
+}
+
+
+
+function jsonHandler(event) {
+
+	var json = event.target.result;
+
+	queryData = processJSON(json);
+
+	console.log(queryData);
+
+
+
+	for (var i = 0; i < queryData.latitude.length; i++) {
+
+		console.log(i);
+
+		queryJSON(queryData.latitude[i], queryData.longitude[i]);	
+
+	}
+
+	// console.log(items);
+
+}
+
+
+
+function processJSON(json) {
+
+	var newArr = JSON.parse(json);
+
+	// console.log(newArr);
+
+	return newArr;
+
+}
+
+
+
+function errorHandler(evt) {
+
+	if(evt.target.error.name == "NotReadableError") {
+
+		alert("Canno't read file !");
+
+	}
+
+}
+
+
+
+function queryJSON(latitude, longitude) {
+
+	var apikey = "통계청 SGIS APIKEY번호 입력";
+
+    var fromSrs = "LL_W";
+
+	var toSrs = "UTM-K";
+
+	
+
+	// console.log(latitude);
+
+	// console.log(longitude);
+
+	
+
+	var theUrl = 'http://sgis.kostat.go.kr/OpenAPI2/coordConversion.do?apikey=' + apikey + '&fromSrs=' + fromSrs + '&toSrs=' + toSrs + '&posX=' + latitude + '&posY=' + longitude;
+
+	
+
+	var result = $.ajax({
+
+				   crossOrigin: true,
+
+
+
+		           url: theUrl,
+
+	           	   context: {},
+
+		           
+
+		           dataType: "json",
+
+		           
+
+		           success: function(msg){
+
+   							$("#output").append(msg + "<br />");
+
+  							}                      
+
+	               });
+
+
+
+}
+
+
+
+function handleFiles(files) {
+
+    // Check for the various File API support.
+
+    if (window.FileReader) {
+
+        // FileReader are supported.
+
+        getAsText(files[0]);
+
+    } else {
+
+        alert('FileReader are not supported in this browser.');
+
+    }
+
+}
+
+ 
+
+function getAsText(fileToRead) {
+
+    var reader = new FileReader();
+
+    // Handle errors load
+
+    reader.onload = jsonHandler;
+
+    reader.onerror = errorHandler;
+
+    // Read file into memory as UTF-8      
+
+    reader.readAsText(fileToRead);
+
+}
+
+ 
+
+function jsonHandler(event) {
+
+    var json = event.target.result;
+
+    queryData = processJSON(json);
+
+    console.log(queryData);
+
+ 
+
+    for (var i = 0; i < queryData.latitude.length; i++) {
+
+        console.log(i);
+
+        queryJSON(queryData.latitude[i], queryData.longitude[i]);    
+
+    }
+
+    // console.log(items);
+
+}
+
+ 
+
+function processJSON(json) {
+
+    var newArr = JSON.parse(json);
+
+    // console.log(newArr);
+
+    return newArr;
+
+}
+
+ 
+
+function errorHandler(evt) {
+
+    if(evt.target.error.name == "NotReadableError") {
+
+        alert("Canno't read file !");
+
+    }
+
+}
+
+ 
+
+function queryJSON(latitude, longitude) {
+
+    var apikey = "통계청 SGIS APIKEY번호 입력";
+
+    var fromSrs = "LL_W";
+
+    var toSrs = "UTM-K";
+
+    
+
+    // console.log(latitude);
+
+    // console.log(longitude);
+
+    
+
+    var theUrl = 'http://sgis.kostat.go.kr/OpenAPI2/coordConversion.do?apikey=' + apikey + '&fromSrs=' + fromSrs + '&toSrs=' + toSrs + '&posX=' + latitude + '&posY=' + longitude;
+
+    
+
+    var result = $.ajax({
+
+                   crossOrigin: true,
+
+ 
+
+                   url: theUrl,
+
+                      context: {},
+
+                   
+
+                   dataType: "json",
+
+                   
+
+                   success: function(msg){
+
+                               $("#output").append(msg + "<br />");
+
+                              }                      
+
+                   });
+
+ 
+
+}

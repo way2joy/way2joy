@@ -1,0 +1,208 @@
+데이터가 보인다에 빠져서, 
+산사랑님이 공유해주신 복습일정을 놓쳐서 catch-Up하기 위해 좀 속도를 높이고 있습니다.
+
+제가 일전에 소개해드렸던 그책의 첫번째  연습문제 풀이 입니다.
+
+문제를 풀어보니, Time series에 대한 감이 조금 옵니다. 
+
+제가 소개해놓고 이런말 하는게 우습고, 겨우 앞의 몇장읽은 상황이기는 합니다만,
+참 군더더기없이 쓴 책입니다. 어려운 이론 몰라도 이해할 수 있게 할려고 무던히 애를 쓰셨네요. 
+저자분들이.(복받으실 것입니다.)
+
+양이 적지 않습니다만, 좋은 내용인 것 같아서, 끝까지 가볼려고 합니다.
+
+Forecasting(by fpp) Exercises
+========================================================
+
+2.8_exercise
+
+1) For each of the following series (from the fma package), make a graph of the data. If transforming seems appropriate, do so and describe the effect.
+
+- Monthly total of people on unemployed benefits in Australia   
+  (January 1956–July 1992).
+```{r 2_8_1_1}
+install.packages("fma")
+data(package="fma")
+library(fma) # 요거 잊기 쉬우니, 빼놓지 않도록 주의할 것.
+
+
+# unemployment benefit in australia : dole
+dole
+length(dole) # timeseries데이터는 length로 크기를 파악함.
+plot(dole)
+
+(lambda <- BoxCox.lambda(dole)) # = 0.329
+plot(BoxCox(dole,lambda)) #transform한 데이터로 예측을 한 경우에, 해석은 트랜스폼한 결과를 역산해서 해석해야 한다. 쉽지않다.
+```
+
+- Monthly total of accidental deaths in the United States 
+  (January 1973–December 1978).
+```{r 2_8_1_2}
+length(usdeaths)
+plot(usdeaths, main="일평균적용전")
+mode(usdeaths)
+
+# 일평균으로 나누는 것이 답인것 같은데,,,
+avgUsdeath = usdeaths/30
+usdeaths[1:30]
+plot(avgUsdeath) #일단 그냥 30으로 나눴더니, 모양이 잘안나온다.
+unclass(usdeaths) # timeseies 데이터의 구조 파악 방법. 1973년부터 1978년까지의 월별데이터임을 알수 있다.
+
+# 1973년 1월부터 1978년 12월까지의 월별날짜수를 알 방법은?
+
+dayDummy <- as.Date("1973-01-01","%Y-%m-%d") : as.Date("1978-12-31","%Y-%m-%d") # D와 d의 차이가 실행여부를 좌우한다.
+dayDummy
+monthDummy <- as.POSIXlt(as.Date(dayDummy, origin="1970-01-01"))
+
+names(unclass(monthDummy)) #특정 클래스의 변수명 파악 방법
+yearDummy <- monthDummy$year
+month <- monthDummy$mon # month가 아니라 mon이다!! 정말 외우기 힘들다. 요일(wday), sec, min, hour, mday, mon, wday, yday, isdst
+
+#ddply등 R전용 함수들도 있지만 당장은 금방배운 sqldf를 사용해본다.
+library(sqldf)
+dayCount <- data.frame(yearDummy, month, monthDummy)
+(count <- sqldf("select yearDummy, month, count(monthDummy) as days
+               from dayCount
+               group by yearDummy, month"))
+# 흠, 1월이 mon에서는 0으로 나오는 구나.
+
+avgUsdeath = usdeaths/count$days
+plot(avgUsdeath, main="일평균 적용후") # ㅋ, 조금나아졌다.
+#1976년말과 1977년말에 미국에서 무슨 일이 있었나?
+```
+
+- Quarterly production of bricks (in millions of units) at Portland
+  , Australia (March 1956–September 1994).
+```{r 2_8_1_3}
+bricksq
+unclass(bricksq) #1956년 1Q부터 1994년 3Q까지 분기별데이터(근데, 왜 1994.5일까?)
+plot(bricksq)
+
+# Box-Cox transformation
+(lambda <- BoxCox.lambda(bricksq)) # = 0.254
+plot(BoxCox(bricksq,lambda)) # 약간 부드러워졌다.
+```
+
+@ comment1 : 타임시리즈 데이터의 생성
+```{r c_1_multivariate time series data}
+?ts # start=c(1961,1)와 end를 지정할 수 있고, frequency를 지정할 수 있다.
+
+z <- ts(matrix(rnorm(300), 100, 3), start = c(1961, 1), frequency = 12) # 그냥 벡터로 생성하면 단일 시계열 데이터로 생성 되나 , 매트릭스로 지정하면 멀티플 시계열데이터로 생성된다.
+
+unclass(z)
+head(z) # as "matrix" 
+plot(z)
+plot(z, plot.type = "single", lty = 1:3) # 시계열데이터를 핸들링하니까 뭔가 공학자가 된 느낌이다. ㅋㅋㅋ
+```
+
+
+2) Use the Dow Jones index (data set dowjones) to do the following:
+Produce a time plot of the series.
+
+- Produce forecasts using the drift method and plot them.
+```{r 2_8_2_1}
+unclass(dowjones)
+head(dowjones)
+dowjones
+
+# 답
+result <- rwf(dowjones, h=10, drift=TRUE) # rwf 함수의 drift인자 활용
+plot(result)
+```
+
+- Show that the graphed forecasts are identical to extending the line drawn between the first and last observations.
+```{r 2_8_2_2}
+(slope <- (121.23 - 110.94)/(78-1))
+121.23 - 78*slope
+110.94 - 1*slope
+abline(110.8064, slope, col="red", lwd=2) # y절편먼저, 기울기나중
+```
+
+- Try some of the other benchmark functions to forecast the same data set. Which do you think is best? Why?
+```{r 2_8_2_3}
+fit1 <- meanf(dowjones, h=10)
+lines(fit1$mean, col=3, lwd=3) # 단순평균법 맘에 안듬.
+
+fit2 <- naive(dowjones, h=10) # h를 꼭 써줘야함
+lines(fit2$mean, col=4, lwd=3) # 나이브하게 그냥 앞의 수치를 그대로 갔다가 썼음. 그래도 평균보다는 나음.
+
+fit3 <- snaive(dowjones, h=10) # h를 꼭 써줘야함
+lines(fit3$mean, col=5, lwd=3) # 연도별 수치가 나이브랑 동일
+
+# 드리프트법이 이중에는 제일 나음. 트렌드가 반영되고 있음.
+```
+
+3) Consider the daily closing IBM stock prices (data set ibmclose).
+
+- Produce some plots of the data in order to become familiar with it.
+```{r 2_8_3_1}
+unclass(ibmclose) # 1년간의 일별데이터로 보임.
+plot(ibmclose) # IBM 주가 종가인 것으로 보임.상반기까지 좋다가 하반기에 빠졌네요. 빠지기 전에 팔고 바닥에서 샀으면...
+```
+
+- Split the data into a training set of 300 observations and a test set of 69 observations.
+```{r 2_8_3_2}
+train = window(ibmclose, end=300) 
+length(train)
+test <- window(ibmclose, start = 301)
+length(test)
+```
+- Try various benchmark methods to forecast the training set and compare the results on the test set. Which method did best?
+```{r 2_8_3_3}
+ibmFit <- rwf(train, h=69, drift=TRUE) #h를 테스트 샘플과 동일하게 맞추어야 함.
+plot(ibmFit)
+
+ibmFit1 <- meanf(train, h=69) #h를 테스트 샘플과 동일하게 맞추어야 함.
+plot(ibmFit1)
+
+ibmFit2 <- naive(train, h=69) #h를 테스트 샘플과 동일하게 맞추어야 함.
+plot(ibmFit2)
+
+ibmFit3 <- snaive(train, h=69) #h를 테스트 샘플과 동일하게 맞추어야 함.
+plot(ibmFit3)
+
+# accuracy 비교
+accuracy(ibmFit, test) # mean absolute error가 테스트셋에서 더 높다. 즉 overfit된 것임. 모양은 이쁜데...
+accuracy(ibmFit1, test) # 역시 테스트에러가 급증함. 너무 단순해서..
+accuracy(ibmFit2, test) # 드리프트보다 조금 낮음
+accuracy(ibmFit3, test)
+```
+
+4) Consider the sales of new one-family houses in the USA, Jan 1973 – Nov 1995 (data set hsales).
+
+- Produce some plots of the data in order to become familiar with it.
+```{r 2_8_4_1}
+unclass(hsales)
+plot(hsales)
+```
+
+- Split the hsales data set into a training set and a test set, where the test set is the last two years of data.
+```{r 2_8_4_2}
+train = window(hsales, end=1994-.05) # 시계열을 길이로 나타내는 모양이다. 1을 빼니까 2개월치가 빠지는데 0.5를 빼니까 1개월치만 빠져서 딱 맞는다. 이걸 연습하라고 저자가 낸 문제인가 보다. 우습지만 재밌다.
+length(train)
+train
+test <- window(hsales, start = 1994)
+length(test)
+test
+```
+
+- Try various benchmark methods to forecast the training set and compare the results on the test set. Which method did best?
+```{r 2_8_4_3}
+hsalesFit <- rwf(train, h=23, drift=TRUE) #h를 테스트 샘플과 동일하게 맞추어야 함.
+plot(hsalesFit)
+
+hsalesFit1 <- meanf(train, h=23) #h를 테스트 샘플과 동일하게 맞추어야 함.
+plot(hsalesFit1)
+
+hsalesFit2 <- naive(train, h=23) #h를 테스트 샘플과 동일하게 맞추어야 함.
+plot(hsalesFit2)
+
+hsalesFit3 <- snaive(train, h=23) #h를 테스트 샘플과 동일하게 맞추어야 함.
+plot(hsalesFit3)
+
+# accuracy 비교
+accuracy(hsalesFit, test) # mean absolute error가 테스트셋에서 더 높다. 즉 약간 overfit된 것임.
+accuracy(hsalesFit1, test) # 앗 이럴수가 단순평균이 드리프트보다 좋다. 점수가.
+accuracy(hsalesFit2, test) # 드리프트보다 아주 조금 낮음
+accuracy(hsalesFit3, test) # 월별 데이터라 seasonality가 있어서 인지 제일 점수가 좋다. 음, 문제를 풀어보니, 이제 대충 time series에 대한 감이 온다. 
+```

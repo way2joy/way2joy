@@ -1,0 +1,321 @@
+비선형 회귀분석 등이 나오니까 답을 제대로 못하는 문제도 슬슬 생기네요.
+대충 이해하는 걸로는 응용문제까지 풀기는 어려움을 다시한번 느낍니다.
+혹시 보시다가 해법을 아시겠으면, 좀 가르쳐 주세요.
+
+FPP : Exercise 5-8
+========================================================
+
+1. The data below (data set fancy) concern the monthly sales figures of a shop which opened in January 1987 and sells gifts, souvenirs, and novelties. 
+
+- The shop is situated on the wharf at a beach resort town in Queensland, Australia. 
+- The sales volume varies with the seasonal population of tourists. 
+- There is a large influx of visitors to the town at Christmas and for the local surfing festival, held every March since 1988. 
+- Over time, the shop has expanded its premises, range of products, and staff.
+
+```{r 1_1_data}
+library(fpp)
+fancy
+```
+
+Produce a time plot of the data and describe the patterns in the graph. Identify any unusual or unexpected fluctuations in the time series.
+```{r 1_1_1}
+plot(fancy)
+# 계절적인 관광객의 영향을 받는 특성으로 매년 말, 크리스마스 시즌경에 큰 매출의 증가가 규칙적으로 나타남.
+# 1988년 부터  시작된 지역 써핑 축제로 3월경에 작은 peak가 1988년부터 나타나고 있음.
+# 매장, 상품등을 늘려나가서 우상향하는 트렌드를 보이고 있고, 트렌드상 1992년부터 공격적인 경영을 하기 시작한 것으로 보임.
+```
+
+Explain why it is necessary to take logarithms of these data before fitting a model.
+```{r 1_1_2}
+# 로그변환을 통해 금액기준 차이를 증가율 기준 차이로 바꿀 수가 있어서 보다 노멀라이즈드된 데이터를 가지고 모델을 구성할 수가 있게 되며, 변수간의 관계가 더 명확하게 드러남..
+```
+
+Use R to fit a regression model to the logarithms of these sales data with a linear trend, seasonal dummies and a “surfing festival” dummy variable.
+```{r 1_1_3}
+log_fancy <- log(fancy)
+plot(log_fancy)
+
+# 크리스마스 시즌과 3월시즌만 반영한 tslm fit임.
+# 시즌효과 더미
+seasonDummy <- rep(c(0,0,0,0,0,0,0,0,0,0,0,1),7)
+seasonDummy
+# 써핑 페스티발 더미
+surfFest <- rep(c(0,0,1,0,0,0,0,0,0,0,0,0),7)
+surfFest
+
+# tslm으로 단순 추세선 피팅
+fancyFit0 <- tslm(log_fancy ~ trend)
+
+# 문제에서 요구한 답은 fancyFit1인 것으로 보임.
+fancyFit1 <- tslm(log_fancy ~ trend + seasonDummy + surfFest)
+summary(fancyFit1)
+
+# 호기심에서 이렇게 넣어보면, 월별로 분할된 데이터가 들어가고, 회귀식에도 각 월별로 회귀식이 나타남.
+fancyFit2 <- tslm(log_fancy ~ trend + season) # 더미변수 없이도 거의 정확하게 트렌드를 찾아내고 있음.
+summary(fancyFit2)
+
+fancyFit3 <- tslm(log_fancy ~ trend + season + seasonDummy + surfFest) # trend + season과 동일함.
+summary(fancyFit3) # seasonDummy와 써핑 페스티벌은 회귀계수가 산출되지 않았음. 왜 그럴까?
+
+
+plot(log_fancy)
+
+lines(fitted(fancyFit0), col="blue", lwd=2) # 트렌드만으로는 그래프가 그냥 직선으로 나옴.
+lines(fitted(fancyFit1), col="green", lwd=2)
+lines(fitted(fancyFit2), col="red", lwd=2)
+lines(fitted(fancyFit3), col="yellow", lwd=2) 
+```
+
+- Plot the residuals against time and against the fitted values. Do these plots reveal any problems with the model?
+```{r 1_1_4}
+resFit0 <- residuals(fancyFit0)
+resFit0
+resFit1 <- residuals(fancyFit1)
+resFit2 <- residuals(fancyFit2)
+resFit3 <- residuals(fancyFit3)
+par(mfrow=c(2,2))
+# 잔차 그래프 4개를 동시에 그림.
+plot(resFit0);plot(resFit1);plot(resFit2);plot(resFit3)
+```
+
+- Do boxplots of the residuals for each month. Does this reveal any problems with the model?
+```{r 1_1_5}
+par(mfrow=c(1,1))
+level <- rep(c(1:12),7)
+boxplot(resFit0 ~ level)
+# 잔차가 완전한 리니어는 아니지만, 트렌드를 나타내고 있는 듯한 모습을 보이고 있음.
+```
+
+- What do the values of the coefficients tell you about each variable?
+```{r 1_1_6}
+# 당초 문제에서 요구한 fancyFit1를 기준으로 설명
+summary(fancyFit1)
+exp(0.024)
+exp(1.421229)
+exp(0.169854)
+
+# 연간의 트렌드는 매년 약 2.4%정도씩 성장하는 모습임. 크리스마스 시즌의 경우에는 비시즌대비 exp(1.421229) 배(약 4.14배) 증가하며, 3월의 써핑 페스티벌 효과는 exp(0.169854)배(약 1.19배, 19% 증가)효과가 있는 것으로 이해가됨.
+```
+
+- What does the Durbin-Watson statistic tell you about your model?
+```{r 1_1_7}
+dwtest(fancyFit1, alternative="two.sided")
+# 더빈왔슨 테스트결과, p값이 거의 0에 가까워서 귀무가설을 기각할 수 있는바, one lag 기준으로 autocorrelation이 존재한다고 판단할 수 있음.
+```
+
+- Regardless of your answers to the above questions, use your regression model to predict the monthly sales for 1994, 1995, and 1996. Produce prediction intervals for each of your forecasts.
+```{r 1_1_8}
+fancyFcast <- forecast(fancyFit1, h=36) #에러가 남. 
+# 아마도 seasonDummy가 별도의 파일로 7년치 84개월분이 활용되고 있어서 84로 예측기간의 숫자를 맞추니까 돌아가긴 하는데, 문제에서 원하는 답과는 다르다.
+
+# 데이터를 만드는 단계부터 다시시작해야 하는 모양이다.
+log_fancy <- log(fancy)
+class(log_fancy)
+plot(log_fancy)
+
+# 크리스마스 시즌과 3월시즌만 반영한 tslm fit임.
+# 시즌효과 더미
+seasonDummy <- rep(c(0,0,0,0,0,0,0,0,0,0,0,1),7)
+seasonDummy
+# 써핑 페스티발 더미
+surfFest <- rep(c(0,0,1,0,0,0,0,0,0,0,0,0),7)
+surfFest
+log_fancy
+fancyData <- cbind(log_fancy, seasonDummy, surfFest)
+class(fancyData) # 클래스가 ts에서 mts를 바뀌었다.
+fancyData # 데이터의 모양도 바뀌었다.
+library(fpp)
+fancyFit4 <- tslm(log_fancy ~ trend + seasonDummy + surfFest)
+summary(fancyFit4)
+fancyFcast1 <- forecast(fancyFit4, h=36) # 그래도 에러가 남. 
+fancyFcast1 <- forecast(fancyFit4, h=84) # 되긴되는데, 출제된 문제보다 예측기간이 길게 나타남.
+plot(fancyFcast1) # 완벽하진 않지만, 다른 문제도 진행해야 하니까, 일단 여기까지로 종료
+
+```
+
+- Transform your predictions and intervals to obtain predictions and intervals for the raw data.
+```{r 1_1_9}
+fancyFcast1$lower[,1]
+unclass(fancyFcast1)
+rawFcast <- exp(fancyFcast1$mean) # predictions 
+rawFcastLower_95 <- exp(fancyFcast1$lower[,2]) # 95% lower
+rawFcastUpper_95 <- exp(fancyFcast1$upper[,2]) # 95% upper
+rawFcast <- cbind(rawFcastLower_95, rawFcast, rawFcastUpper_95)
+head(rawFcast) # 정확하게 풀은 건지 잘 모르겠다.
+```
+
+- How could you improve these predictions by modifying the model?
+```{r 1_1_10}
+# 월별 시즌효과를 넣으면 훨씬더 정확해 질 것이다.
+# 잔차 및 dwtest등 실행 필요.
+
+```
+
+2. The data below (data set texasgas) shows the demand for natural gas and the price of natural gas for 20 towns in Texas in 1969.
+```{r 2_data}
+head(texasgas)
+texasgas
+names(texasgas)
+```
+
+- Do a scatterplot of consumption against price. The data are clearly not linear. Three possible nonlinear models for the data are given below
+
+Ci = exp(a+b*Pi+ei)
+
+Ci = a1+ b1*Pi+ei  when Pi≤60
+   = a2+ b2*Pi+ei  when Pi>60;
+   
+Ci = =a+ b1*P + b2*P^2
+
+The second model divides the data into two sections, depending on whether the price is above or below 60 cents per 1,000 cubic feet.
+
+```{r 2_1}
+plot(consumption~price, data=texasgas)
+```
+
+- Can you explain why the slope of the fitted line should change with P?
+```{r 2_2}
+# 가격과 소비량 사이의 관계가 명확하게 선형이 아니므로 보다 정확한 예측을 위해서는 비선형관계를 표현할 수 있도록 모델을 구성할 필요가 있기 때문이다.
+```
+
+- Fit the three models and find the coefficients, and residual variance in each case.
+
+Ci = exp(a+bPi+ei)
+```{r 2_3_1}
+# 로그를 취해서 모델을 돌린다.
+
+log_consumption <- log(texasgas$consumption)
+gasLog <- data.frame(texasgas$price, log_consumption)
+gasLog
+gasFitExp <- lm(log_consumption ~ texasgas.price, data=gasLog)
+
+plot(log_consumption ~ gasLog$texasgas.price)
+
+abline(gasFitExp) # 시계열이 아닌경우에는 그래프도 다르게 그려야한다. 모양이 대충 맞아들어간다.
+
+summary(gasFitExp)
+residuals(gasFitExp)
+plot(residuals(gasFitExp)) # 별다른 패턴은 없음.
+dwtest(gasFitExp, alternative="two.sided")
+# 근소한 차이이긴 하나, 귀무가설을 기각하지 못하므로 correlation이 없다.
+plot(residuals(gasFitExp)~texasgas$price) 
+plot(residuals(gasFitExp)~log_consumption)
+```
+
+Ci = a1+ b1*Pi+ei  when Pi≤60
+   = a2+ b2*Pi+ei  when Pi>60;
+
+For the second model, the parameters a1, a2, b1, b2 can be estimated by simply fitting a regression with four regressors but no constant: 
+(i) a dummy taking value 1 when P≤60 and 0 otherwise; 
+(ii) P1=P when P≤60 and 0 otherwise; 
+(iii) a dummy taking value 0 when P≤60 and 1 otherwise; 
+(iv) P2=P when P>60 and 0 otherwise.
+```{r 2_3_2}
+p2Dummy <- ifelse(texasgas$price > 60,1,0)
+
+# 가격이 60이하인 경우
+p1 <- ifelse(texasgas$price <= 60, texasgas$price,0)
+
+# 가격이 60을 넘는 경우
+p2 <- ifelse(texasgas$price > 60, texasgas$price,0)
+gasTwo <- data.frame(p1, p2Dummy, p2, texasgas$consumption)
+gasTwo
+
+gasTwoFit <- lm(texasgas.consumption ~ ., data=gasTwo)
+summary(gasTwoFit)
+plot(texasgas)
+
+sum(residuals(gasTwoFit)) #잔차의 합도 거의 0과 같음.
+plot(residuals(gasTwoFit)) # 별다른 패턴은 발견되지 않음
+```
+
+Ci = a +b1*P +b2*P^2
+```{r 2_3_3}
+P2 <- texasgas$price^2
+gasP2 <- data.frame(texasgas,P2)
+gasP2
+gasP2Fit <- lm(consumption~., data=gasP2)
+summary(gasP2Fit)
+sum(residuals(gasP2)) #잔차의 합도 거의 0과 같음.
+plot(residuals(gasP2Fit))
+```
+
+- For each model, find the value of R2 and AIC, and produce a residual plot. Comment on the adequacy of the three models.
+```{r 2_4}
+CV(gasFitExp)
+CV(gasTwoFit)
+CV(gasP2Fit)
+```
+
+- For prices 40, 60, 80, 100, and 120 cents per 1,000 cubic feet, compute the forecasted per capita demand using the best model of the three above.
+```{r 2_5}
+Fcast <- forecast(gasFitExp, newdata=c(40,60,80,100,120))
+Fcast
+gasFitExp
+rawConsumption <- exp(Fcast$mean)
+rawConsumption
+compTwo
+# 이건 금방된다.
+# 그런데 consumption 수치가 로그 변환된 값이라, exp로 변환을 해야 맞는 것 같은데, 정확히 잘 모르겠다.
+
+Fcast <- forecast(gasTwoFit, newdata=c(40,60,80,100,120)) # 또 디멘젼 문제로 계산이 안됨. 뭔가 이해를 제대로 못하고 있는 것임. 모델을 만들어도 예측값을 못내면 무슨 소용이 있나?
+Fcast
+
+# 일단 수동으로라도 답을 찾아 본다.
+compTwo <- rep(0,5)
+compTwo[1] <- 220.893-2.9057*40
+compTwo[2] <- 220.893-2.9057*60 # 60초과과 이하를 별도로 취급하는 지는 알겠는데 정확히 어떻게 하는지는 잘 모르겠다.
+compTwo[3] <- (220.893-136.107)-0.447*80
+compTwo[4] <- (220.893-136.107)-0.447*100
+compTwo[5] <- (220.893-136.107)-0.447*120
+
+# 교재에 나오는 내용은 아니지만 다른 nonlinear방법을 적용해본다
+gasLoess <- loess(consumption ~ price, data=texasgas, span=0.75)
+summary(gasLoess)
+plot(texasgas)
+texasgas
+predictGas <- predict(gasLoess, newdata=texasgas$price)
+summary(predictGas)
+lines(texasgas$price, predictGas)
+
+predictGas2 <- predict(gasLoess, newdata=c(40,60,80,100,120))
+predictGas2 # loess모델은 training범위를 넘으면 에러가 나오는 모양이다.
+
+# 모델을 만들어도 정확히 이해가 안되면, 활용을 할 수가 없다.
+# 조금 더 이해를 높여야 겠다.
+```
+
+- Compute 95% prediction intervals. Make a graph of these prediction intervals and discuss their interpretation.
+```{r 2_6}
+# 신뢰구간을 구할려면 standard error를 알아야 하는데..
+# 업무에서는 제일 중요한 부분인 것으로 생각되지만, 실력이 아직
+# 부족하여, 일단 pass.
+```
+
+- What is the correlation between P and P^2? Does this suggest any general problem to be considered in dealing with polynomial regressions---especially of higher orders?
+```{r 2_7}
+panel.hist <- function(x, ...)
+{
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(usr[1:2], 0, 1.5) )
+    h <- hist(x, plot = FALSE)
+    breaks <- h$breaks; nB <- length(breaks)
+    y <- h$counts; y <- y/max(y)
+    rect(breaks[-nB], 0, breaks[-1], y, col = "cyan", ...)
+}
+
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
+{
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    r <- abs(cor(x, y))
+    txt <- format(c(r, 0.123456789), digits = digits)[1]
+    txt <- paste0(prefix, txt)
+    if(missing(cex.cor)) cex.cor <- 1/strwidth(txt) # 1정도가 적당함.
+    text(0.5, 0.5, txt, cex = cex.cor * r)
+}
+
+pairs(gasP2, diag.panel=panel.hist, lower.panel=panel.cor, upper.panel=panel.smooth)
+
+# price와 price^2의 값이 거의 1에 가까운 상관관계를 보이고 있다.
+```

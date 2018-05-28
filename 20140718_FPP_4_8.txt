@@ -1,0 +1,108 @@
+FPP 4.10 Exercises
+========================================================
+
+1._Electricity consumption was recorded for a small town on 12 randomly chosen days. The following maximum temperatures (degrees Celsius) and consumption (megawatt-hours) were recorded for each day.
+
+- Plot the data and find the regression model for Mwh with temperature as an explanatory variable. Why is there a negative relationship?
+
+온도가 낮아지면 전열기 사용등이 늘기 때문. 30도 이상이 되면 에어콘 사용이 늘어 전력량이 다시 올라갈 가능성이 있음.
+
+```{r 4_10_1_1}
+plot(Mwh ~ temp, data=econsumption)
+fit <- lm(Mwh ~ temp, data=econsumption)
+abline(fit, col=2, lwd=2)
+```
+
+- Produce a residual plot. Is the model adequate? Are there any outliers or influential observations?
+```{r 4_10_1_2}
+res <- residuals(fit)
+plot(res)
+plot(residuals(fit) ~ temp, data=econsumption) # x값을 정해주니까 좋다.
+sum(residuals(fit)) #거의 0임. 
+# 산포도의 모양도 어떤 패턴을 찾을 수 없음
+# 별다른 outlier도 관측상으로는 보이지 않음.
+```
+
+- Use the model to predict the electricity consumption that you would expect for a day with maximum temperature 10∘ and a day with maximum temperature 35∘. Do you believe these predictions?
+Give prediction intervals for your forecasts. The following R code will get you started:
+```{r 4_10_1_3_forecast}
+cast1 <- forecast(fit, newdata=c(10, 35))
+plot(cast1) # forecast함수에 트레이닝모델이 들어가 있기 때문에 그 결과물을 가지고 플롯을 구성하면 자동으로 예전데이터가 올라간다.
+```
+
+2._The following table gives the winning times (in seconds) for the men’s 400 meters final in each Olympic Games from 1896 to 2012 (data set `olympic`).
+
+```{r 4_10_2_1}
+unclass(olympic) #row.names가 지정된 데이터프레임이다.
+class(olympic)
+olympic
+```
+
+- Update the data set `olympic` to include the winning times from the last few Olympics.
+```{r 4_10_2_2}
+#문제가 잘이해가 안감. 헷갈리긴 하지만, 아마도 2012년까지 올림픽 기록을 뒤져서 데이터를 채우라는 것으로 판단됨.
+data <- matrix(c(2000,2004,2008,2012,47.50,47.63,47.25,47.63 ),4,2)
+rownames(data) <- 24:27
+colnames(data) <- c("Year","time")
+olympic2 <- rbind(olympic,data) #열 이름을 맞추지 않으니까 병합이 안된다. 실전에서는 이러면 당황할 것이다. 일부러 문제를 이렇게 냈을까? 그랫다면 대다나다.
+olympic2
+```
+
+- Plot the winning time against the year. Describe the main features of the scatterplot.
+```{r 4_10_2_3}
+plot(time ~ Year, data=olympic)
+#전반적으로 기록이 감축되는 경향을 보이고 있음.
+```
+
+- Fit a regression line to the data. Obviously the winning times have been decreasing, but at what *average* rate per year?
+```{r 4_10_2_4}
+fit2 <- lm(time~Year, data=olympic)
+coef(fit2) # 매년 약 0.76초씩 단축이되는 것으로 보임.
+abline(fit2)
+```
+
+- Plot the residuals against the year. What does this indicate about the suitability of the fitted line?
+```{r 4_10_2_5}
+plot(residuals(fit2)~Year, data=olympic)
+# 잔차가 거의 랜덤한 분포를 보임.
+sum(residuals(fit2)) #잔차의 합도 거의 0에 가까움.
+```
+
+- Predict the winning time for the men’s 400 meters final in the 2000, 2004, 2008 and 2012 Olympics. Give a prediction interval for each of your forecasts. What assumptions have you made in these calculations?
+```{r 4_10_2_6}
+cast3 <- forecast(fit2, newdata=c(2000,2004,2008,2012))
+plot(cast3)
+
+
+# 예전에는 predict함수를 수업에서 주로썻다.
+cast4 <- predict(fit2, newdata=c(2000,2004,2008,2012)) #문법이 다른 모양이다. 제대로 안나온다.
+cast4 <- predict(fit2, newdata=data.frame(Year=c(2000,2004,2008,2012))) 
+plot(cast4) # predict는 예측치만 나오고, forecast는 기존것과 예측치를 같이 보여준다. 
+cast3;cast4 # 예측값은 같으나 표시하는 방법 자체가 다르다.
+```
+
+- Find out the actual winning times for these Olympics (see www.databaseolympics.com). How good were your forecasts and prediction intervals?
+```{r 4_10_2_7}
+cast4 - data[,2]
+data[,2] # 실제 올림픽 기록보다 예측치가 5~6초 더 낮다. 인간의 능력에는 한계가 있어 예전 트렌드대로 기록이 계속 단축되기는 어렵기 때문이다. 좋은 문제이다.
+```
+
+3. An elasticity coefficient is the ratio of the percentage change in the forecast variable (y) to the percentage change in the predictor variable (x). 
+
+Mathematically, the elasticity is defined as (dy/dx)×(x/y). Consider the log-log model, log(y)=β0+β1*log(x)+ε.
+
+- Express y as a function of x and show that the coefficient β1 is the elasticity coefficient.
+
+```{r 4_10_3_주관식 문제}
+
+# 로그함수를 풀어야 하는데, 내가 제일 취약한 수학이다.
+# log(y)=β0+β1*log(x)+ε.
+# log(y)-β1*log(x) =β0+ε
+# 로그의 빼기는 합치면서 나누기가되므로,
+# log(y/x^β1) = β0+ε
+# 로그를 벗겨내면
+# y/x^β1 = exp(β0+ε)
+# 따라서 y = exp(β0+ε)*x^β1
+# 결국β1은 x의 파워가 되므로 x의 비율변화분의 β1승이 y의 변화값이 되므로 탄력성이라고 이해할 수 있다.
+# wikipeida의 도움을 받아 겨우 풀었다.
+```

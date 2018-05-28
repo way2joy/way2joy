@@ -1,0 +1,866 @@
+## ----주의사항------------------------------------------------
+
+코드 실행전에 Rtools.exe 파일을 설치하셔야 하고,
+
+노트북의 OS에 따라서는 관리자의 권한으로 R-Studio를 실행하셔야 할
+
+경우도 발생할 수 있습니다.
+
+
+
+## ----results=FALSE, message=FALSE----------------------------------------
+
+library(sp)
+
+library(rgeos)
+
+library(maptools)
+
+library(rgdal)
+
+library(raster)
+
+library(rasterVis)
+
+library(ggmap)
+
+library(geosphere)
+
+library(sf)
+
+library(dplyr)
+
+library(jsonlite)
+
+library(data.table)
+
+library(stringr)
+
+
+
+## ------------------------------------------------------------------------
+
+ziptxt <- dir("./zipdata/")
+
+ziptxt
+
+
+
+## ------------------------------------------------------------------------
+
+fread_zip = function( file , ...) {
+
+  path = paste("unzip -p", file)
+
+  print(path)
+
+  fread(path, ...)
+
+}
+
+events <- fread_zip(paste0("./zipdata/",ziptxt[1]), verbose=T)
+
+
+
+## ------------------------------------------------------------------------
+
+events <- fread_zip(paste0("./zipdata/",ziptxt[24]), verbose=T)
+
+setnames(events,2, "startDate")
+
+events[,startdate := as.Date(as.POSIXct(startDate, "%m/%d/%Y %H:%M", tz="America/New_York"), tz="America/New_York")]
+
+
+
+events
+
+
+
+events[!is.na(startdate),.N, keyby=.(startdate)]
+
+
+
+## ------------------------------------------------------------------------
+
+## 데이터 검증 -------------------
+
+dumA <- read.csv(paste0("./data/","2016-Q3-Trips-History-Data-1.csv"), stringsAsFactors=FALSE)
+
+dumB <- read.csv(paste0("./data/","2016-Q3-Trips-History-Data-2.csv"), stringsAsFactors=FALSE)
+
+head(dumA)
+
+head(dumB)
+
+head(dumB);tail(dumB)
+
+compareAB <- data.table(rbind(dumA, dumB))
+
+# eventcsv <- read.csv("./data/2010-Q4-cabi-trip-history-data.csv", stringsAsFactors = F)
+
+compareAB[,startdate := as.Date(as.POSIXct(Start.date, "%m/%d/%Y %H:%M", tz="America/New_York"), tz="America/New_York")]
+
+
+
+cbind(events[!is.na(startdate),.N, keyby=.(startdate)], compareAB[,.N, keyby=.(startdate)])
+
+compareAB
+
+
+
+## ------------------------------------------------------------------------
+
+# 읽어들이는 데이터의 크기와 컬럼들의 특성들을 따로 정리해두는 것이 좋을 것으로 보임--------------
+
+
+
+start.time <- Sys.time()
+
+for(i in ziptxt) {
+
+  filename <- paste0("cabi",substr(i,3,4), substr(i,6,7)) 
+
+  assign(filename, fread_zip(paste0("./zipdata/", i), verbose=F)) # 필요시 nrow 키워드 활용 
+
+  cat("n",filename,"n","n")
+
+  print(names(get(filename)))
+
+  save(list=filename, file=paste0("./dtdata/",filename,".RData"))
+
+}
+
+(difftime(Sys.time(), start.time, units="mins"))  # 2분 정도면 완료 됨 
+
+
+
+## ------------------------------------------------------------------------
+
+library(data.table)
+
+meanchar <- function(x) {
+
+  mean(nchar(x))
+
+}
+
+
+
+numchar <- events[, lapply(.SD, meanchar)] # by를 기준으로 부분집합을 만들어줌.
+
+                                             # by 기준이 없는 경우는 모든 데이터를 대상으로 표시해줌. 
+
+
+
+## ------------------------------------------------------------------------
+
+# 3) 컬럼의 처음과 끝 부분 추출 --------------
+
+
+
+firstrow <- t(events[1])
+
+row.names(firstrow) <- NULL
+
+lastrow <- t(events[.N])
+
+row.names(lastrow) <- NULL
+
+t(firstrow)
+
+t(lastrow)
+
+
+
+## ------------------------------------------------------------------------
+
+# 3) 컬럼의 클래스(class) 추출 --------------
+
+
+
+colcls <- t(events[, lapply(.SD, class)])
+
+row.names(colcls) <- NULL
+
+colcls
+
+
+
+
+
+
+
+chkdum <- data.frame(datanm="events",colnm=names(events), colcls=colcls, firstrow=firstrow, lastrow=lastrow, 
+
+                    numchar=t(numchar))
+
+
+
+row.names(chkdum) <- NULL
+
+chkdum
+
+
+
+## ------------------------------------------------------------------------
+
+
+
+ziptxt <- dir("./zipdata/")
+
+
+
+
+
+fread_zip = function( file , ...) {
+
+  path = paste("unzip -p", file)
+
+  fread(path, ...)
+
+}
+
+
+
+meanchar <- function(x) {
+
+  mean(nchar(x))
+
+}
+
+
+
+
+
+zipSummary <- c()
+
+
+
+start.time <- Sys.time()
+
+for(i in ziptxt) {
+
+  filename <- paste0("cabi",substr(i,3,4), substr(i,6,7)) 
+
+  assign(filename, fread_zip(paste0("./zipdata/", i), verbose=F)) # 필요시 nrow 키워드 활용 
+
+  cat("n",filename,"n","n")
+
+  
+
+  ## dataSummary 시도 
+
+  dummy <- get(filename)
+
+  numchar <- dummy[, lapply(.SD, meanchar)]
+
+  colnm <- names(dummy)
+
+  colloc <- 1:length(colnm)
+
+  colNchar <- nchar(colnm)
+
+  colcls <- dummy[, lapply(.SD, class)]
+
+  firstrow <- dummy[1]
+
+  lastrow <- dummy[.N]
+
+  dumsummary <- data.frame(datanm = filename,
+
+                           colnm = colnm,
+
+                           colloc = colloc,
+
+                           colcls = t(colcls),
+
+                           numchar = t(numchar),
+
+                           firstrow = t(firstrow))
+
+  ## 최종데이터 저장 
+
+  save(list=filename, file=paste0("./dtdata/",filename,".RData"))
+
+  zipSummary <- rbind(zipSummary, dumsummary)
+
+  row.names(zipSummary) <- NULL
+
+}
+
+save(zipSummary, file="./RData/00_zipSummary.RData")
+
+(difftime(Sys.time(), start.time, units="mins"))  # 2분 정도면 완료 됨. 추가 명령어 입력으로 3분정도 소요.
+
+
+
+## ------------------------------------------------------------------------
+
+dim(zipSummary)
+
+zipSummarydt <- data.table(zipSummary)
+
+zipSummarydt[, tidyfirst := ifelse(nchar(as.character(firstrow)) < 25, as.character(firstrow),
+
+                                   substr(as.character(firstrow),1,24))]
+
+t(zipSummarydt[,.N, keyby=.(datanm)])
+
+
+
+## ------------------------------------------------------------------------
+
+
+
+
+
+for(i in ziptxt) {
+
+  filename <- paste0("cabi",substr(i,3,4), substr(i,6,7)) 
+
+  cat("n",filename,"n","n")
+
+  print(names(get(filename)))
+
+}
+
+
+
+## ------------------------------------------------------------------------
+
+## 컬럼명 기준으로 정리후 데이터 정리 방안 모색--------------
+
+load("./RData/stationXy.RData")
+
+stationXydt <- data.table(stationXy)
+
+stationXydt
+
+
+
+## ------------------------------------------------------------------------
+
+data.frame(zipSummarydt[order(zipSummary$colnm), -6, with=F])
+
+
+
+## ------------------------------------------------------------------------
+
+fnamelist <- c()
+
+for(i in ziptxt) {
+
+  filename <- paste0("cabi",substr(i,3,4), substr(i,6,7)) 
+
+  fnamelist <- c(fnamelist, filename)
+
+}
+
+fnamelist
+
+
+
+## ------------------------------------------------------------------------
+
+#' 1) bike번호는 W와 5자리 숫자로 구성되는데, 컬럼명이 여러개일수 있다.
+
+#'    bike #, bike#, bike number 등 
+
+
+
+gidx <- grep("^W[0-9]{5}",zipSummary$firstrow)
+
+zipSummarydt[gidx, -c(6)]
+
+
+
+## ------------------------------------------------------------------------
+
+
+
+#'    
+
+gidx <- grep("Casual|Member|Registered|Subscriber",zipSummarydt$firstrow)
+
+zipSummarydt[gidx,-c(6)]
+
+
+
+## ------------------------------------------------------------------------
+
+
+
+gidx <- grep("[Dd]uration",zipSummarydt$colnm)
+
+zipSummarydt[gidx,-c(6)]
+
+
+
+## ------------------------------------------------------------------------
+
+ 
+
+gidx <- grep("[-/]",zipSummarydt$firstrow)
+
+zipSummarydt[gidx, -c(6)]
+
+
+
+## ------------------------------------------------------------------------
+
+gidx <- grep("",zipSummarydt$colnm)
+
+zipSummarydt[gidx,-c(6)]
+
+gidx <- grep("character",zipSummarydt$colcls)
+
+zipSummarydt[gidx,-c(6)]
+
+gidx <- grep("[Ss]tation",zipSummarydt$colnm)
+
+zipSummarydt[gidx,-c(6)]
+
+
+
+## ------------------------------------------------------------------------
+
+bikeNCol6 <- fnamelist[1:19]
+
+bikeNCol8 <- fnamelist[20:26]
+
+bikeNCol6
+
+bikeNCol8 # bikenum으로 컬럼명 통일 
+
+
+
+## ------------------------------------------------------------------------
+
+for(iV in bikeNCol6) {
+
+  dummy <- get(iV)
+
+  setnames(dummy, 6, "bikenum")
+
+  assign(iV, dummy)
+
+}
+
+
+
+for(iV in bikeNCol8) {
+
+  dummy <- get(iV)
+
+  setnames(dummy, 8, "bikenum")
+
+  assign(iV, dummy)
+
+}
+
+
+
+## ------------------------------------------------------------------------
+
+mtypeCol7 <- fnamelist[1:19]
+
+mtypeCol9 <- fnamelist[20:26]
+
+mtypeCol7
+
+mtypeCol9  # 컬럼명을 usertype으로 통일, 신규생성 
+
+
+
+## ------------------------------------------------------------------------
+
+for(iV in mtypeCol7) {
+
+  dummy <- get(iV)
+
+  setnames(dummy, 7, "usertype")
+
+  assign(iV, dummy)
+
+}
+
+
+
+for(iV in mtypeCol9) {
+
+  dummy <- get(iV)
+
+  setnames(dummy, 9, "usertype")
+
+  assign(iV, dummy)
+
+}
+
+
+
+## ------------------------------------------------------------------------
+
+durationType1 <- fnamelist[1:17]
+
+durationType1
+
+durationType2 <- fnamelist[18:26]
+
+durationType2 # 컬럼명 ride_sec으로 통일, 신규생성 
+
+
+
+## ------------------------------------------------------------------------
+
+hretrieve <- function(xV) {
+
+  as.numeric(str_match(xV,"^([0-9]+)h")[[2]])
+
+}
+
+
+
+mretrieve <- function(xV) {
+
+  as.numeric(str_match(xV," ([0-9]+)m")[[2]])
+
+}
+
+
+
+sretrieve <- function(xV) {
+
+  as.numeric(str_match(xV," ([0-9]+)s")[[2]])
+
+}
+
+
+
+## ------------------------------------------------------------------------
+
+start.time <- Sys.time()
+
+for(iV in durationType1) {
+
+  dummy <- get(iV)
+
+  setnames(dummy,1,"duration")
+
+  dummy[, time_h := hretrieve(duration), by= 1:nrow(dummy) ]
+
+  dummy[, time_m := mretrieve(duration), by= 1:nrow(dummy) ]
+
+  dummy[, time_s := sretrieve(duration), by= 1:nrow(dummy) ]
+
+  dummy[, ride_sec := time_h*60*60 + time_m*60 + time_s]
+
+  dummy[, time_h := NULL]
+
+  dummy[, time_m := NULL]
+
+  dummy[, time_s := NULL]
+
+  dummy <- dummy[!is.na(ride_sec)]
+
+  print(paste0(iV,"_ 시간처리 오류 건수 __",sum(is.na(dummy$ride_sec))))
+
+  assign(iV, dummy)
+
+}
+
+difftime(Sys.time(), start.time, units="mins")
+
+
+
+
+
+start.time <- Sys.time()
+
+for(iV in durationType2) {
+
+  dummy <- get(iV)
+
+  setnames(dummy,1,"duration")
+
+  dummy[,ride_sec := round(as.numeric(duration)/1000,0)]
+
+  dummy <- dummy[!is.na(ride_sec)]
+
+  print(paste0(iV,"_ 시간처리 오류 건수 __",sum(is.na(dummy$ride_sec))))
+
+  assign(iV, dummy)
+
+}
+
+difftime(Sys.time(), start.time, units="mins")
+
+
+
+
+
+## ------------------------------------------------------------------------
+
+## 날자형식이 틀린 2014년 사분기 데이터 부터 정리해서 문자열의 형식을 맞추어둠.------
+
+
+
+setnames(cabi14Q4, c(2,4),c("startdate", "enddate"))
+
+cabi14Q4[, startdate := strftime(as.POSIXct(startdate,"%Y-%m-%d %H:%M", tz = "America/New_York"),
+
+                                 format="%m/%d/%Y %H:%M", tz="America/New_York")]
+
+cabi14Q4[, enddate := strftime(as.POSIXct(enddate,"%Y-%m-%d %H:%M", tz = "America/New_York"),
+
+                                 format="%m/%d/%Y %H:%M", tz="America/New_York")]
+
+
+
+cabi14Q4
+
+
+
+## ------------------------------------------------------------------------
+
+dateCol23 <- fnamelist[c(1:12, 20:26)]
+
+dateCol24 <- fnamelist[13:19]
+
+dateCol23
+
+dateCol24 # startdate, enddate로 컬럼명 통일, 신규생성 
+
+
+
+## ------------------------------------------------------------------------
+
+
+
+start.time <- Sys.time()
+
+for(iV in dateCol23) {
+
+  dummy <- get(iV)
+
+  setnames(dummy,c(2,3),c("startdate","enddate"))
+
+  dummy[, startdate := as.POSIXct(startdate, format="%m/%d/%Y %H:%M", tz="America/New_York")]
+
+  dummy[, enddate := as.POSIXct(enddate, format="%m/%d/%Y %H:%M", tz="America/New_York")]
+
+  print(paste0(iV,"_ 날짜 처리 오류 건수 __",sum(is.na(dummy$startdate))))
+
+  print(paste0(iV,"_ 날짜 처리 오류 건수 __",sum(is.na(dummy$enddate))))
+
+  dummy <- dummy[!is.na(startdate)]
+
+  assign(iV, dummy)
+
+}
+
+difftime(Sys.time(), start.time, units="mins")
+
+
+
+
+
+start.time <- Sys.time()
+
+for(iV in dateCol24) {
+
+  dummy <- get(iV)
+
+  setnames(dummy,c(2,4),c("startdate","enddate"))
+
+  dummy[, startdate := as.POSIXct(startdate, format="%m/%d/%Y %H:%M", tz="America/New_York")]
+
+  dummy[, enddate := as.POSIXct(enddate, format="%m/%d/%Y %H:%M", tz="America/New_York")]
+
+  print(paste0(iV,"_ 날짜 처리 오류 건수 __",sum(is.na(dummy$startdate))))
+
+  print(paste0(iV,"_ 날짜 처리 오류 건수 __",sum(is.na(dummy$enddate))))
+
+  dummy <- dummy[!is.na(startdate)]
+
+  # print(paste0(iV,"___",sum(is.na(dummy$enddate))))
+
+  assign(iV, dummy)
+
+}
+
+difftime(Sys.time(), start.time, units="mins")
+
+
+
+## ------------------------------------------------------------------------
+
+stationCol45A <- fnamelist[1:5]
+
+stationCol45B <- fnamelist[6:12]
+
+stationCol35 <- fnamelist[13:19]
+
+stationCol57 <- fnamelist[20:26]
+
+stationCol45A
+
+stationCol45B
+
+stationCol35 
+
+stationCol57 # setname으로 변경함 origin=4번 컬럼, destination=6번 컬럼. 
+
+
+
+## ------------------------------------------------------------------------
+
+start.time <- Sys.time()
+
+
+
+oretrieve <- function(xV) {
+
+  as.integer(str_match(xV, "\(([0-9]{5})\)$")[[2]])
+
+}
+
+
+
+for(iV in stationCol45A) {
+
+  dummy <- get(iV)
+
+  setnames(dummy,c(4,5),c("startstation","endstation"))
+
+  dummy[, origin := oretrieve(startstation), by= 1:nrow(dummy)]
+
+  dummy[, destination := oretrieve(endstation), by= 1:nrow(dummy)]
+
+  print(paste0(iV,"_ 오리진 코드 추출 에러 __",sum(is.na(dummy$origin))))
+
+  print(paste0(iV,"_ 데스티네이션 코드 추출 에러 __",sum(is.na(dummy$destination))))
+
+  assign(iV, dummy)
+
+}
+
+difftime(Sys.time(), start.time, units="mins")
+
+
+
+## ------------------------------------------------------------------------
+
+start.time <- Sys.time()
+
+for(iV in stationCol45B) {
+
+  dummy <- get(iV)
+
+  setnames(dummy,c(4,5),c("startstation","endstation"))
+
+  dummy <- merge(dummy, stationXydt[,c("name","short_name")], all.x=T, by.x="startstation", by.y="name")
+
+  print(dummy)
+
+  setnames(dummy, ncol(dummy), "origin")
+
+  setkey(dummy, endstation)
+
+  dummy <- merge(dummy, stationXydt[,c("name","short_name")], all.x=T, by.x="endstation", by.y="name")
+
+  setnames(dummy, ncol(dummy), "destination")
+
+  print(dummy)
+
+  print(paste0(iV,"___",sum(is.na(dummy$origin))))
+
+  print(paste0(iV,"___",sum(is.na(dummy$destination))))
+
+  assign(iV, dummy)
+
+}
+
+difftime(Sys.time(), start.time, units="mins") # 중복이 되는 경우에는 에러가 나니까 정리 필요 
+
+
+
+start.time <- Sys.time()
+
+for(iV in stationCol35) {
+
+  dummy <- get(iV)
+
+  setnames(dummy,c(3,5),c("startstation","endstation"))
+
+  dummy <- merge(dummy, stationXydt[,c("name","short_name")], all.x=T, by.x="startstation", by.y="name")
+
+  # print(dummy)
+
+  setnames(dummy, ncol(dummy), "origin")
+
+  setkey(dummy, endstation)
+
+  dummy <- merge(dummy, stationXydt[,c("name","short_name")], all.x=T, by.x="endstation", by.y="name")
+
+  setnames(dummy, ncol(dummy), "destination")
+
+  # print(dummy)
+
+  print(paste0(iV,"___",sum(is.na(dummy$origin))))
+
+  print(paste0(iV,"___",sum(is.na(dummy$destination))))
+
+  assign(iV, dummy)
+
+}
+
+difftime(Sys.time(), start.time, units="mins") # 중복이 되는 경우에는 에러가 나니까 정리 필요
+
+
+
+## ------------------------------------------------------------------------
+
+start.time <- Sys.time()
+
+for(iV in stationCol57) {
+
+  dummy <- get(iV)
+
+  setnames(dummy,c(4,6),c("origin","destination"))
+
+  assign(iV, dummy)
+
+}
+
+difftime(Sys.time(), start.time, units="mins") # 중복이 되는 경우에는 에러가 나니까 정리 필요
+
+
+
+## ------------------------------------------------------------------------
+
+cabidata <- c()
+
+for(fV in fnamelist) {
+
+  dummy <- get(fV)
+
+  dummy[, datanm := fV]
+
+  dummy <- dummy[,c("datanm","origin", "destination", "startdate", 
+
+                    "enddate", "ride_sec", "bikenum", "usertype"), with=F]
+
+  cabidata <- rbind(cabidata, dummy)
+
+}
+
+
+
+DTnumlist <- cabidata[,.N, keyby=.(datanm)]
+
+DTnumlist
+
+
+
+
+save(cabidata, file="./dtdata/cabidata_combined.RData")

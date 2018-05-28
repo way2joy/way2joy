@@ -1,0 +1,566 @@
+지난 거의 일주일 이상을 SNA를 가지고 끙끙 앓았다.
+뭐 아주 어려운 것 때문에 그런 것이 아니라, 
+igraph에서 사용하는 데이터 파일이 어떤 식으로 구성되어 있는지 아무리 해도
+모르겠어서, 이걸 찾는데 거의 시간을 보냈다.
+
+아는 사람에게 물어보면 좋겠지만, 혼자서 찾아가며 공부하는 경우는 이런게 제일 어렵다.
+서로 잘 물어보지도 않는 아주 기본적인 것을 모르면 정말 알기 힘들기 때문이다.
+힘들뿐 아니라 이 충격으로 말미암아 터빈(?)이 꺼지기도 한다. ^^;;
+
+며칠 동안 헤매다가 결국 예전에 신청했다가 듣지도 않았던 Coursera SNA강의를 처음부터
+찬찬히 들으면서 겨우 깨달았다. SNA데이터는 점(vertex)과 점을 이어주는 선(edge)가 전부라는 것을 말이다.
+
+허명회 교수님의 책에 나오는 예처럼, 10*10정도라면 모르지만 1000*1000만 해도 거의 다루기가
+어렵고, 강의에서 나오는 Linkedin과 facebook처럼 같이 몇백만, 몇억명의 Social Network Graph를 다루는 
+기업들에서는 더욱 말할 것도 없다.
+
+그나마 대부분이 0인 데이터들이 많아 Sparse데이터라고 말해지는 이런 것들을, 
+그냥 통째로 관리하는 것은 효율적이지 않아서, 
+vertex와 edge만 가지고 데이터를 관리하는데, 추가적으로 이들 vertex(V)의 속성이나
+edge(E)들의 가중치를 별도로 관리하게 만드는 것이 효과적이라서 
+이를 그대로 데이터 구조에 반영하고 있는 것이다.
+
+그리고 이들 상호간의 연결 여부나 그 정도를 나타내는 가중치는 인위적으로 만들기도 한다. 
+결국 SNA를 실무에 활용하여 가치를 만들려면,
+sna나 igraph를 어떻게 다루는가도 중요하지만, 
+이러한 데이터를 여하히 만들어 내는가가 더욱 중요하다는 생각이 들었다.
+
+SNA with practice data (마무리)
+========================================================
+1. R을 활용한 사회네트워크분석 입문
+
+Ch4) 가중 네트워크
+
+```{r ch_4_weighted network}
+psyJournal <- matrix(c(119,32,2,35,6,4,125,2,
+                       8,510,8,8,116,9,19,5,
+                       4,16,84,0,11,7,6,5,
+                       21,11,1,533,1,0,70,0,
+                       0,73,7,0,225,3,0,13,
+                       1,9,8,1,7,52,0,2,
+                       85,119,16,126,12,27,586,13,
+                       2,4,10,1,7,5,15,58), byrow=T, nrow=8)
+rownames(psyJournal) <- c("AJP", "JASP","JAP","JCPP","JCP","JEDP","JEXP","PKA")
+colnames(psyJournal) <- c("AJP", "JASP","JAP","JCPP","JCP","JEDP","JEXP","PKA")
+psyJournal
+
+(psyJnorm <- psyJournal - diag(diag(psyJournal))) #정확히 대각선 요소만 골라낸다. 즉 자체인용은 제외한다.
+
+gplot(psyJnorm, displaylabels=T, boxed.labels=F, vertex.cex=sqrt(diag(psyJournal))/7, vertex.col="white",vertex.sides=20, edge.lwd=psyJnorm/7, edge.col="gray", label.pos=4)
+#vertex.cex로 노드의 원크기 통제, edge,lwd로 선의 두께 통제, label.pos는 1이 하, 2가 좌, 3이 위, 4가 오른쪽이다.(글자의 위치가)
+```
+
+```{r ch_4_weighted adjacency matrix}
+L <- matrix(c(0,0,0,1,0,0,0,0,0,
+              0,0,0,1,0,0,0,0,0,
+              0,0,0,1,0,0,0,0,0,
+              1,1,1,0,1,0,0,0,0,
+              0,0,0,1,0,1,0,0,0,
+              0,0,0,0,1,0,1,0,0,
+              0,0,0,0,0,1,0,1,0,
+              0,0,0,0,0,0,1,0,1,
+              0,0,0,0,0,0,0,1,0), byrow=T, nrow=9)
+
+
+Lw <-matrix(c(0,0,0,1,0,0,0,0,0,
+              0,0,0,0.5,0,0,0,0,0,
+              0,0,0,0.5,0,0,0,0,0,
+              1,0.5,0.5,0,1,0,0,0,0,
+              0,0,0,1,0,1,0,0,0,
+              0,0,0,0,1,0,0.5,0,0,
+              0,0,0,0,0,0.5,0,0.25,0,
+              0,0,0,0,0,0,0.25,0,0.25,
+              0,0,0,0,0,0,0,0.25,0), byrow=T, nrow=9)
+Lw
+gplot(L, mode="kamadakawai") #일본사람이 만든 방법인가보다. 가마다카와이
+gplot(Lw, displaylabels=T, boxed.labels=F, mode="kamadakawai")
+```
+
+@가중네트워크의 최단거리 행렬을 구할려면, 먼저 노드간 인접거리 행렬을 구해야 한다. 단순성을 위해서 인접노드간 거리를 연결선 가중치의 역수로 일단 정의하자고 하신다.
+
+```{r weighted network closeness_ignore.eval_F}
+Gw <- 1/Lw
+(Dw <- geodist(Gw, ignore.eval=F)$gdist) #ignore.eval이 inf값도 0으로쳐서 거리를 계산하라는 의미인것 같다.
+round(closeness(Gw, ignore.eval=F),3)
+round(closeness(Gw, cmode="suminvdir",ignore.eval=F),3)
+```
+@가중네트워크는 중심성을 계산할때, 거리를 어떻게 할지 사전에 정의를
+해야 한다.
+```{r weighted network betweenness}
+Tw <- matrix(c(0,4,2,0,0,0,
+               4,0,1,4,2,0,
+               2,1,0,0,0,0,
+               0,4,0,0,0,0,
+               0,2,0,0,0,1,
+               0,0,0,0,1,0), byrow=T, nrow=6)
+DTw <- 1/Tw
+gplot(Tw, displaylabels=T, mode="kamadakawai")
+geodist(DTw, ignore.eval=F)
+betweenness(DTw, ignore.eval=F)
+```
+
+```{r outward inward closeness}
+GGw <- 1/psyJnorm
+round(closeness(GGw, cmode="suminvdir",ignore.eval=F),3)
+betweenness(GGw, ignore.eval=F) #에러
+round(closeness(t(GGw), cmode="suminvdir",ignore.eval=F),3)
+betweenness(t(GGw), ignore.eval=F) #에러
+
+#가중 네트워크용 패키지
+install.packages("tnet")
+library(tnet)
+?tnet
+
+betweenness_w(psyJnorm) #가중네트워크라도 굳이 거리를 구하지 않아도된다.
+betweenness_w(t(psyJnorm))
+
+# 가중네크워크의 특성을 살리기위해 거리를 구하는 것을 넣었다, 뺐다하는 게 헷갈린다.
+```
+
+```{r Ch_4_exercises}
+#1
+freemanWadj <- matrix(0,46,46)
+edge <- data.frame(freeman[,1:2])
+edge
+freemanWadj[as.matrix(edge)] <- freeman[,3] 
+freemanWadj #데이터 만드는 것만도 아주 힘들었다.
+diag(freemanWadj) #diagonal을 확인해 두는 것이 중요하다.
+
+dFreeman <- 1/2^freemanWadj #가중네트워크의 거리를 잠정적으로 일단 정의했다.
+head(dFreeman)
+
+# 근접 중심성, 가중네트워크의 거리매트릭스 이용
+detach(package:tnet)
+detach(package:igraph)
+gplot(dFreeman, displaylabels=T)
+round(closeness(dFreeman,ignore.eval=F),3) #out
+round(closeness(dFreeman,cmode="suminvdir", ignore.eval=F),3)
+
+round(closeness(t(dFreeman),ignore.eval=F),3) #in
+round(closeness(t(dFreeman),cmode="suminvdir", ignore.eval=F),3)
+
+#매개 중심성, 가중네트워크의 거리매트릭스 이용
+betweenness(dFreeman,ignore.eval=F)
+
+#연결정도 중심성
+degree(freemanWadj, ignore.eval=F) # 이경우에는 거리가 아니라 원래값을 사용한다.왜냐하면 가중치의 합이기 때문이다. 가중치를 활용한 거리가 아니기 때문이라는 생각이 든다.
+
+# 위세 중심성. 아직도 정확히 어떤의미인지, 어떤 때 쓸려고 만든 값인지 잘 모르겠다.
+evcent(freemanWadj, ignore.eval=F) # 이경우에도 원래값을 사용한다.
+
+# 그래프 중심성
+graphcent(dFreeman, ignore.eval=T)
+```
+
+```{r ch_4_exercise_2}
+dummy <- read.table("Freemans_EIES-2_n48.txt", header=F, sep=" ")
+head(dummy)
+e2Wadj <- matrix(0,46,46)
+edge <- data.frame(dummy[,1:2])
+e2Wadj[as.matrix(edge)] <- dummy[,3] 
+e2Wadj #데이터 만드는 것만도 아주 힘들었다.
+diag(e2Wadj)
+
+distE2 <- 1/2^e2Wadj #가중네트워크의 거리를 잠정적으로 일단 정의했다.
+head(distE2)
+
+# 근접 중심성, 가중네트워크의 거리매트릭스 이용
+gplot(distE2, displaylabels=T)
+round(closeness(distE2,ignore.eval=F),3) #out
+round(closeness(distE2,cmode="suminvdir", ignore.eval=F),3)
+
+round(closeness(t(distE2),ignore.eval=F),3) #in
+round(closeness(t(distE2),cmode="suminvdir", ignore.eval=F),3)
+
+#매개 중심성, 가중네트워크의 거리매트릭스 이용
+betweenness(distE2,ignore.eval=F)
+
+#연결정도 중심성
+degree(e2Wadj, ignore.eval=F) # 이경우에는 거리가 아니라 원래값을 사용한다.왜냐하면 가중치의 합이기 때문이다. 가중치를 활용한 거리가 아니기 때문이라는 생각이 든다.
+
+# 위세 중심성. 아직도 정확히 어떤의미인지, 어떤 때 쓸려고 만든 값인지 잘 모르겠다.
+evcent(e2Wadj, ignore.eval=F) # 이경우에도 원래값을 사용한다.
+
+# 그래프 중심성
+graphcent(distE2, ignore.eval=T)
+```
+
+
+ch5) bipartite Network (multi-mode)
+
+```{r ch_5_2mode network}
+library(sna)
+(A <- matrix(c(1,0,0,
+              1,1,0,
+              1,0,0,
+              0,1,0,
+              0,1,1,
+              0,0,1), byrow=T, ncol=3))
+n <- nrow(A)
+m <- ncol(A)
+rownames(A) <- 1:n
+colnames(A) <- c("A", "B", "C")
+(B <- rbind(cbind(matrix(0,n,n),A), cbind(t(A), matrix(0,m,m))))
+```
+
+```{r}
+vertex.col <- c(rep("red",n), rep("blue",m))
+vertex.cex <- c(rep(1,n), rep(2,m))
+gplot(B, mode="circle", displaylabels=T, boxed.labels=F,
+      vertex.col=vertex.col, vertex.cex=vertex.cex,
+      label.col=vertex.col, label.cex=1.2, usearrows=F)
+```
+
+```{r}
+Rdegree <- degree(B, cmode="indegree")[1:n]
+Rcloseness1 <- closeness(B)[1:n]
+Rcloseness2 <- closeness(B, cmode="suminvdir")[1:n]
+Rbetweenness <- betweenness(B)[1:n]
+Rdegree
+```
+
+```{r}
+R <- A %*% t(A)
+diag(R) <- 0
+R
+
+C <- t(A) %*% A
+diag(C) <- 0
+C
+```
+
+```{r}
+source("http://bioconductor.org/biocLite.R")
+biocLite("SNAData")
+library(graph)
+install.packages("Rgraphviz")
+library(Rgraphviz)
+library(SNAData)
+data(package="SNAData")
+```
+
+```{r ceoclubsAM}
+data(CEOclubsAM)
+class(CEOclubsAM)
+colnames(CEOclubsAM)
+rownames(CEOclubsAM)
+?letters
+paste(letters[1:10],sep=",")
+stringA = ""
+for (i in 1:10) {
+  stringA <- paste(stringA,LETTERS[i],sep="")
+}
+stringA
+```
+
+```{r}
+A <- as.matrix(CEOclubsAM)
+n <- nrow(A)
+m <- ncol(A)
+A <- as.matrix(CEOclubsAM)
+n <- nrow(A)
+m <- ncol(A)
+rownames(A) <- 1:n
+for (i in 1:m) {
+  colnames(A)[i] <- LETTERS[i]
+}
+A
+
+B <- rbind(cbind(matrix(0,n,n),A),cbind(t(A), matrix(0,m,m)))
+
+
+vertex.col <- c(rep("red",n), rep("blue",m))
+vertex.cex <- c(rep(1,n), rep(2,m))
+gplot(B, mode="circle", displaylabels=T, boxed.labels=F,
+      vertex.col=vertex.col, vertex.cex=vertex.cex,
+      label.col=vertex.col, label.cex=1.2, usearrows=F)
+
+gplot(B, mode="kamadakawai", displaylabels=T, boxed.labels=F,
+      vertex.col=vertex.col, vertex.cex=vertex.cex,
+      label.col=vertex.col, label.cex=1.2, usearrows=F)
+
+#행네크워크
+R <- A %*% t(A)
+diag(R) <- 0
+C <- t(A) %*% A
+diag(C) <- 0
+
+round(closeness(1/R, cmode="suminvdir", ignore.eval=F),2)
+round(closeness(1/C, cmode="suminvdir", ignore.eval=F),2)
+
+R[which(R>=1)] <- 1  #betweenness를 구하기전에 하는 전처리임.
+C[which(C>=1)] <- 1
+R;C
+round(betweenness(R),2)
+round(betweenness(C),2)
+```
+
+```{r Ch5_Exercises}
+# 2모드일 경우에는 자연스럽게 연관행렬로 만들어서 계산을 한다. 신기하다.
+(dA <- geodist(B)) # 어떻게 해석해야 하는지 잘 모르겠음.
+
+Rw <- A %*% t(A)
+Rw
+LRw <- 1/Rw
+round(closeness(LRw, ignore.eval=F),2)
+ceo <- round(closeness(LRw, cmode="suminvdir", ignore.eval=F),2)
+plot(ceo, type="b")
+abline(h=2, col="red", lwd=2)
+text(1:26,ceo*1.02,1:26,col="red")
+```
+
+```{r}
+detach(package:tnet)
+detach(package:igraph)
+
+B <- rbind(cbind(matrix(0,n,n),A),cbind(t(A), matrix(0,m,m)))
+B
+round(closeness(B)[(n+1):(n+m)],2)
+```
+
+```{r}
+# CEO와의 평균거리가 최소인 클럽은???
+colSums(geodist(A)$gdist[(n+1):(n+m),(n+1):(n+m)])
+rowSums(geodist(A)$gdist[(n+1):(n+m),(n+1):(n+m)])
+diag(B)
+
+colSums(geodist(A)$gdist[1:n,1:n])
+rowSums(geodist(A)$gdist[1:n,1:n])
+diag(B)
+```
+
+
+@igraph는 네트워크 A를 행렬로 보는 것이아니라, 점과선으로 본다.
+다만, 일련번호를 0에서 부터 시작한다.(?)
+
+@최근에는 sna패키지 보다는 igraph패키지가 많이 사용되고 있는 것 같다. 다만 igraph의 데이터 구조는 edgelist가 원칙이다. 
+
+summary하면 나오는 attribute는 각 vertex(V)와 edge(E)에 대한 
+다양한 속성을 보여주는 것으로 결국은 점과 에지의 정보를 가지고 있는 것이다. 
+
+- 이러한 인접 매트릭스의 수치를 직접 만들어 낼 줄 아는 능력이 
+결국 이 SNA를 가지고 가치를 창출하느냐 못하느냐를 결정하는 것으로
+생각된다.
+
+```{r}
+## Examples for the igraph package by Michael Hahsler
+## see: http://igraph.sourceforge.net/documentation.html
+
+library(igraph)
+
+## create a random graph
+g <-erdos.renyi.game(50, 2/50)
+summary(g)
+
+## plot
+plot(g)
+layout <-layout.fruchterman.reingold(g)
+
+plot(g, layout=layout)
+
+## degree
+
+degree(g)
+hist(degree(g))
+plot(g, layout=layout)
+
+summary(g)
+g$p
+g$loops
+g$type
+g$name
+V(g)
+E(g)
+## number of geodesics (shortest paths) going through a vertex or an edge
+betweenness(g)
+edge.betweenness(g)
+
+plot(g, layout=layout, vertex.size=betweenness(g)/max(betweenness(g)), edge.width=edge.betweenness(g)/max(edge.betweenness(g)))
+
+
+## diameter - longest geodesic
+diameter(g)
+get.diameter(g)
+
+## Maximal independent vertex sets
+independence.number(g)
+maximal.independent.vertex.sets(g) # largest independent vertex set
+
+col <- rep("blue",length(V(g)))
+col[maximal.independent.vertex.sets(g)[[1]]+1L] <- "red"
+plot(g, layout=layout, vertex.color=col)
+
+
+## Max-flow / min-cut
+graph.maxflow(g, 23, 6)
+graph.mincut(g, value.only=FALSE)
+
+
+## find connected components
+cl <- clusters(g)
+cl
+
+plot(g, layout=layout, vertex.color=cl$membership+2)
+
+
+## get components
+dg <- decompose.graph(g)
+length(dg)
+
+## find neighborhood of vertex
+gn <- graph.neighborhood(g, 2)
+plot(gn[[50]], layout=layout.fruchterman.reingold)
+
+## find cliques
+maximal.cliques(g)
+
+
+## large graph (social networks)
+g <- barabasi.game(1000, power=1)
+layout <- layout.fruchterman.reingold(g)
+plot(g, layout=layout, vertex.size=2, vertex.label=NA, edge.arrow.size=.2)
+
+## Page Rank
+pr <- page.rank(g)$vector
+plot(g, layout=layout, vertex.size=pr, vertex.label=NA, edge.arrow.size=.2)
+
+## Eigenvector centrality
+ec <- evcent(g)$vector
+plot(g, layout=layout, vertex.size=ec, vertex.label=NA, edge.arrow.size=.2)
+
+
+## Kleinberg's hub and authority scores.
+auth <- authority.score(g)$vector
+hub <- hub.score(g)$vector
+plot(g, layout=layout, vertex.size=hub, vertex.label=NA, edge.arrow.size=.2)
+plot(g, layout=layout, vertex.size=auth, vertex.label=NA, edge.arrow.size=.2)
+
+
+## community detection
+## betweenness
+eb <- edge.betweenness.community(g)
+community.to.membership(graph, eb)
+member <- community.to.membership(g, eb$merges, step=nrow(eb$merges)-10)
+plot(g, vertex.color= member$membership+2, vertex.size=5, layout=layout,  vertex.label=NA, edge.arrow.size=.2)
+
+
+## random walk
+eb <- walktrap.community(g)
+community.to.membership(graph, eb)
+member <- community.to.membership(g, eb$merges, step=nrow(eb$merges)-10)
+plot(g, vertex.color= member$membership+2, vertex.size=5, layout=layout,  vertex.label=NA, edge.arrow.size=.2)
+
+```
+
+@ 최종연습용 데이터
+
+[SNA 교수님의 페이스북 네트워크(익명처리)_G](https://drive.google.com/file/d/0By_uRJx10HlgSWFpem0tOW1BNkk/edit?usp=sharing)
+
+[랜덤네트워크_위의 교수님과 동일한 규모로 처리_randomG](https://drive.google.com/file/d/0By_uRJx10HlgOEk0STYwU0tIU2M/edit?usp=sharing)
+
+[Sparce Network 사례_g](https://drive.google.com/file/d/0By_uRJx10HlgTm5RSk96R1NuY0E/edit?usp=sharing)
+
+```{r Supplement_SNA_sampleData analysis}
+load(file="networkOfHer.RData") #G
+load(file="sample_g.Rdata") #g
+randomG = read.graph("[test]randomNw.gml",format="gml") #gephi데이터 파일 형식으로 보임.
+```
+
+# get the vitals on the graph you just imported
+```{r}
+summary(randomG)
+summary(G) #페이스북 graph사례
+summary(g) #wikipedia 데이터 샘플
+
+
+Gd <- degree(G, mode="out")
+V(G)$label[which.max(Gd)]
+randomGd <- degree(randomG, mode="out")
+V(randomG)$label[which.max(randomGd)]
+gd <- degree(g, mode="out")
+V(g)$label[which.max(gd)]
+
+graph.density(G)
+graph.density(randomG)
+graph.density(g) # 상당히 sparce함을 알 수 있다.
+
+path.length.hist(G)
+path.length.hist(randomG)
+graph.rechability(G)
+
+shortest.paths(G, mode="out")
+gpath <- shortest.paths(g, mode="out")
+V(g)$label[which.max(gpath)]
+
+Gc <- closeness(G, mode="in")
+V(G)$label[which.max(Gc)]
+closeness(randomG, mode="in")
+closeness(g, mode="in")
+
+round(betweenness(G),2)
+round(betweenness(randomG),2)
+betweenness.estimate(g, directed=F, cutoff=0)
+
+clust_G <- clusters(G, mode="strong")
+table(clust_G$csize)
+
+no.clusters(G)
+no.clusters(randomG)
+no.clusters(g)
+
+plot(cluster.distribution(G))
+plot(cluster.distribution(randomG))
+plot(cluster.distribution(g))
+
+plot(degree.distribution(G)) # 예를 들어 degree가 20개일 확률을 나타낸 것임.
+plot(degree.distribution(randomG)) #랜덤하게 인위적으로 생성된 모델이라 정규분포 비슷한 분포를 보인다. 
+
+plot(degree.distribution(g)) #전형적인 scale-free네트워크이다.
+
+GMc <- maximal.cliques(as.undirected(G))
+(GL <- length(GMc))
+
+GLc <- largest.cliques(as.undirected(G))
+(GLc <- length(GLc))
+
+randomGMc <- maximal.cliques(as.undirected(randomG))
+(randomGL <- length(randomGMc))
+
+gMc <- maximal.cliques(as.undirected(g))
+(gL <- length(gMc))
+
+Gpg <- page.rank(G)
+V(G)$label[which.max(Gpg$vector)]
+
+randomGpg <- page.rank(randomG)
+V(randomG)$label[which.max(randomGpg$vector)]
+
+gpg <- page.rank(g)
+V(g)$label[which.max(gpg$vector)]
+
+```
+
+@ 수많은 데이터를 가진, 네트워크 모델에서 눈으로 특정한 인맥등을 가려내는 것은 거의 불가능하기 때문에,
+이들을 가려내는 지표들이 굉장히 다양하게 개발되고있는 것 같다.
+```{r}
+graph.coreness(as.undirected(G)) # 실제 인맥이라 코어니스가 높은 vertex가 많다.
+graph.coreness(as.undirected(randomG)) #에르도스 레니 분포를 따라서 거의 코어니스가 비슷하다.
+
+Gfc = fastgreedy.community(as.undirected(G))
+sizes(Gfc)
+V(G)$label[membership(Gfc)==1]
+
+randomGfc = fastgreedy.community(as.undirected(randomG))
+sizes(randomGfc)
+V(randomG)$label[membership(randomGfc)==4]
+
+gfc = fastgreedy.community(as.undirected(g))
+sizes(gfc)
+
+
+plot.igraph(G, layout=layout.fruchterman.reingold, vertex.label.cex=0.5)
+plot.igraph(G, layout=layout.kamada.kawai, vertex.label.cex=0.5)
+
+plot.igraph(randomG, layout=layout.fruchterman.reingold, vertex.label.cex=0.5)
+plot.igraph(randomG, layout=layout.kamada.kawai, vertex.label.cex=0.5)
+```
